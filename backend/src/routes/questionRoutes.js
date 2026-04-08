@@ -1,9 +1,17 @@
 const express = require('express');
 const router = express.Router();
-const { createQuestion, getAllQuestions } = require('../controllers/questionController');
+const {
+    createQuestion,
+    getAllQuestions,
+    getQuestionById,
+    updateQuestion,
+    deleteQuestion
+} = require('../controllers/questionController');
 
-// Khi gọi POST http://localhost:5000/api/questions
-router.post('/', createQuestion); 
-router.get('/', getAllQuestions); // Thêm dòng này để lấy danh sách
+router.post('/', createQuestion);
+router.get('/', getAllQuestions);
+router.get('/:id', getQuestionById);
+router.put('/:id', updateQuestion);
+router.delete('/:id', deleteQuestion);
 
 module.exports = router;

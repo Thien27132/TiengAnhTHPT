@@ -31,6 +31,7 @@ const Login = () => {
                 // 2. Lưu thông tin User để Dashboard hiển thị
                 // Lấy thông tin user từ object mà Backend trả về
                 const userToSave = {
+                    UserID: data.user.UserID,
                     FullName: data.user.FullName,
                     Email: data.user.Email,
                     role: data.user.role

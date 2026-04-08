@@ -1,7 +1,7 @@
 const sql = require('mssql');
 const path = require('path');
 // Chỉ định chính xác đường dẫn đến file .env ở thư mục gốc
-require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
 const config = {
     user: process.env.DB_USER,

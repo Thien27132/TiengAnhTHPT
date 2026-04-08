@@ -58,13 +58,16 @@ const StudentDashboard = () => {
           </div>
 
           {/* Card: Lịch sử thi */}
-          <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 hover:shadow-xl transition-all cursor-pointer group text-gray-400">
-             <div className="w-14 h-14 bg-gray-100 text-gray-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition">
+          <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 hover:shadow-xl transition-all cursor-pointer group">
+             <div className="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition">
               <History size={24} />
             </div>
             <h3 className="text-2xl font-bold text-gray-800">Lịch sử làm bài</h3>
             <p className="text-gray-500 mt-2">Xem lại kết quả và các câu sai đã làm.</p>
-            <button className="mt-6 w-full border border-gray-200 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-50 transition">
+            <button 
+              className="mt-6 w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition"
+              onClick={() => navigate('/exam-history')}
+            >
               Xem chi tiết
             </button>
           </div>

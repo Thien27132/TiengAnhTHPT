@@ -58,11 +58,12 @@ const login = async (req, res) => {
             message: "Đăng nhập thành công!", 
             token, 
             user: {
+                UserID: user.UserID,
                 FullName: user.FullName,
                 Email: user.Email,
                 role: user.RoleName
             } 
-    });
+        });
     } catch (err) {
         res.status(500).json({ message: "Lỗi đăng nhập", error: err.message });
     }

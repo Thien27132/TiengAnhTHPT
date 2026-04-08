@@ -41,7 +41,7 @@ const AdminLayout = () => {
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto p-8">
-        <Outlet /> {/* Nơi QuestionManager hiển thị */}
+        <Outlet /> {/* Nơi QuestionManager, ExamManager, ExamDetail hiển thị */}
       </main>
     </div>
   );
