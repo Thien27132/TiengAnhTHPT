@@ -8,6 +8,7 @@ const authRoutes = require('./src/routes/auth');
 const tagRoutes = require('./src/routes/tagRoutes'); 
 const questionRoutes = require('./src/routes/questionRoutes');
 const examRoutes = require('./src/routes/examRoutes');
+const analysisRoutes = require('./src/routes/analysisRoutes');
 
 const app = express();
 
@@ -21,6 +22,7 @@ app.use('/api/exams', examRoutes);
 app.use('/api/tags', tagRoutes);
 app.use('/api/questions', questionRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/analysis', analysisRoutes);
 
 // Kết nối DB
 connectDB();
