@@ -23,19 +23,19 @@ const AnalysisPage = () => {
 
             // Lấy dữ liệu tỷ lệ sai theo tag
             const errorRateRes = await analysisApi.getErrorRateByTagSystem();
-            setErrorRateData(errorRateRes.data);
+            setErrorRateData(errorRateRes);
 
             // Lấy dữ liệu xếp hạng
             const rankingRes = await analysisApi.rankStudentsByTag(selectedTag);
-            setRankingData(rankingRes.data);
+            setRankingData(rankingRes);
 
             // Lấy dữ liệu phân bố
             const distributionRes = await analysisApi.getStudentDistributionByErrorRate(selectedTag);
-            setDistributionData(distributionRes.data);
+            setDistributionData(distributionRes);
 
             // Lấy danh sách cần focus
             const focusRes = await analysisApi.getStudentsFocusList(selectedTag);
-            setFocusListData(focusRes.data);
+            setFocusListData(focusRes);
         } catch (err) {
             console.error('Error fetching analysis data:', err);
             setError('Lỗi tải dữ liệu phân tích: ' + err.message);

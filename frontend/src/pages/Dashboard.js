@@ -11,7 +11,7 @@ const Dashboard = () => {
     const user = userData && userData !== "undefined" ? JSON.parse(userData) : null;
 
     const handleLogout = () => {
-        localStorage.clear(); // Xóa sạch token
+        localStorage.clear(); 
         navigate('/login');
     };
 

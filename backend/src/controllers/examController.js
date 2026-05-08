@@ -214,8 +214,14 @@ const getExamDetail = async (req, res) => {
 
 const getStudentExamHistory = async (req, res) => {
     const { studentId } = req.params;
+    const { limit } = req.query;
+    const parsedLimit = Number(limit) > 0 ? Number(limit) : null;
+
     try {
-        const result = await sql.query`
+        const request = new sql.Request();
+        request.input('StudentID', sql.Int, studentId);
+
+        let queryText = `
             SELECT 
                 er.ResultID,
                 e.ExamID,
@@ -226,9 +232,26 @@ const getStudentExamHistory = async (req, res) => {
                 er.CompletedAt
             FROM ExamResults er
             JOIN Exams e ON er.ExamID = e.ExamID
-            WHERE er.StudentID = ${studentId}
+            WHERE er.StudentID = @StudentID
             ORDER BY er.CompletedAt DESC`;
 
+        if (parsedLimit) {
+            queryText = `
+                SELECT TOP (${parsedLimit})
+                    er.ResultID,
+                    e.ExamID,
+                    e.ExamName,
+                    e.Level,
+                    er.Score,
+                    er.CompletedTime,
+                    er.CompletedAt
+                FROM ExamResults er
+                JOIN Exams e ON er.ExamID = e.ExamID
+                WHERE er.StudentID = @StudentID
+                ORDER BY er.CompletedAt DESC`;
+        }
+
+        const result = await request.query(queryText);
         res.json(result.recordset);
     } catch (err) {
         console.error('getStudentExamHistory error:', err);

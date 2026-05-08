@@ -242,7 +242,7 @@ const QuestionManager = () => {
           className="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition"
         >
           <Plus size={18} />
-          Thêm đề mới
+          Thêm câu hỏi mới
         </button>
       </div>
 

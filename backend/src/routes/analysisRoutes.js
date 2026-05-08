@@ -20,4 +20,13 @@ router.get('/distribution', analysisController.getStudentDistributionByErrorRate
 // Danh sách học sinh cần focus
 router.get('/focus-list', analysisController.getStudentsFocusList);
 
+// Bản đồ năng lực cá nhân của học sinh
+router.get('/student-skill-map', analysisController.getStudentSkillMap);
+
+// Tiến độ điểm số của học sinh theo đề thi
+router.get('/student-progress', analysisController.getStudentProgress);
+
+// Danh sách chi tiết câu trả lời sai kèm theo Tag
+router.get('/incorrect-answers', analysisController.getIncorrectAnswersWithTags);
+
 module.exports = router;

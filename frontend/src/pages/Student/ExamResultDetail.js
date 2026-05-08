@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axiosClient from '../../api/axiosClient';
 import { ArrowLeft, Check, X } from 'lucide-react';
+import IncorrectAnswersReview from './IncorrectAnswersReview';
 
 // Helper function to parse Content from JSON format
 const parseContent = (content) => {
@@ -52,6 +53,7 @@ const ExamResultDetail = () => {
   const navigate = useNavigate();
   const [result, setResult] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('review'); // 'review' | 'detailed'
 
   useEffect(() => {
     const fetchResultDetail = async () => {
@@ -228,9 +230,41 @@ const ExamResultDetail = () => {
           </div>
         </div>
 
-        {/* Exam Content */}
-        <div className="space-y-8">
-          {(() => {
+        {/* Tab Navigation */}
+        <div className="flex gap-2 border-b mb-8 sticky top-20 bg-slate-50 z-20 -mx-8 px-8 py-2">
+          <button
+            onClick={() => setActiveTab('review')}
+            className={`px-4 py-3 font-medium border-b-2 transition ${
+              activeTab === 'review'
+                ? 'border-indigo-600 text-indigo-600'
+                : 'border-transparent text-gray-600 hover:text-gray-800'
+            }`}
+          >
+            🎯 Danh sách câu sai
+          </button>
+          <button
+            onClick={() => setActiveTab('detailed')}
+            className={`px-4 py-3 font-medium border-b-2 transition ${
+              activeTab === 'detailed'
+                ? 'border-indigo-600 text-indigo-600'
+                : 'border-transparent text-gray-600 hover:text-gray-800'
+            }`}
+          >
+            📝 Xem chi tiết
+          </button>
+        </div>
+
+        {/* Tab Content - Danh sách câu sai kèm Tag */}
+        {activeTab === 'review' && (
+          <div className="mb-8">
+            <IncorrectAnswersReview resultId={resultId} />
+          </div>
+        )}
+
+        {/* Tab Content - Chi tiết các câu hỏi */}
+        {activeTab === 'detailed' && (
+          <div className="space-y-8">
+            {(() => {
             let questionNumber = 0;
             return questions.map((item, passageIndex) => {
               if (item.type === 'passage') {
@@ -362,6 +396,7 @@ const ExamResultDetail = () => {
             });
           })()}
         </div>
+        )}
 
         {/* Action Buttons */}
         <div className="mt-8 flex gap-4 justify-center">

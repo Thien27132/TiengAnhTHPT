@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Play, History, Award } from 'lucide-react'; // Đã xóa User ở đây
+import StudentAnalytics from './StudentAnalytics';
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
@@ -72,6 +73,8 @@ const StudentDashboard = () => {
             </button>
           </div>
         </div>
+
+        <StudentAnalytics studentId={user.UserID} />
 
         {/* Section: Điểm số cao */}
         <div className="mt-12 bg-indigo-900 rounded-3xl p-8 text-white flex items-center justify-between overflow-hidden relative">
