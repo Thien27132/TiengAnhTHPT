@@ -2,6 +2,13 @@ import React, { useEffect, useState } from 'react';
 import axiosClient from '../../api/axiosClient';
 import { X, Check, AlertCircle, BookOpen } from 'lucide-react';
 
+// Helper: strip HTML tags và decode HTML entities
+const stripHtml = (html) => {
+  if (!html) return '';
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  return doc.body.textContent || '';
+};
+
 const IncorrectAnswersReview = ({ resultId }) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -180,7 +187,7 @@ const IncorrectAnswersReview = ({ resultId }) => {
                         ❌ Bạn trả lời
                       </p>
                       <p className="text-sm text-gray-800">
-                        {item.studentAnswer}
+                        {stripHtml(item.studentAnswer)}
                       </p>
                     </div>
 
@@ -190,7 +197,7 @@ const IncorrectAnswersReview = ({ resultId }) => {
                         ✅ Đáp án đúng
                       </p>
                       <p className="text-sm text-gray-800">
-                        {item.correctAnswer}
+                        {stripHtml(item.correctAnswer)}
                       </p>
                     </div>
 
@@ -255,10 +262,10 @@ const IncorrectAnswersReview = ({ resultId }) => {
                             />
                             <div className="mt-2 space-y-1">
                               <p className="text-xs text-gray-600">
-                                <span className="font-semibold">Bạn trả lời:</span> {item.studentAnswer}
+                                <span className="font-semibold">Bạn trả lời:</span> {stripHtml(item.studentAnswer)}
                               </p>
                               <p className="text-xs text-green-700">
-                                <span className="font-semibold">Đáp án đúng:</span> {item.correctAnswer}
+                                <span className="font-semibold">Đáp án đúng:</span> {stripHtml(item.correctAnswer)}
                               </p>
                             </div>
                           </div>

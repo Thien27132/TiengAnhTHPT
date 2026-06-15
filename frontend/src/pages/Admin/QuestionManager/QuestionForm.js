@@ -182,8 +182,8 @@ const QuestionForm = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center px-4">
-      <div className="w-full max-w-6xl bg-white rounded-3xl p-6 shadow-2xl overflow-auto max-h-[90vh]">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+      <div className="w-full max-w-6xl bg-white rounded-3xl shadow-2xl max-h-[90vh] flex flex-col">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-6 pb-4 flex-shrink-0">
           <div>
             <h3 className="text-xl font-bold text-gray-900">{editingId ? 'Sửa đề bài' : 'Tạo đề bài mới'}</h3>
             <p className="text-sm text-gray-500">Nhập đầy đủ đề bài, passage, câu hỏi và đáp án cho từng loại.</p>
@@ -191,7 +191,8 @@ const QuestionForm = ({
           <button onClick={onClose} className="text-gray-500 hover:text-gray-900">Đóng</button>
         </div>
 
-        <div className="space-y-5">
+        {/* Thanh công cụ format - sticky */}
+        <div className="sticky top-0 z-10 bg-white px-6 pb-3 flex-shrink-0 border-b border-gray-100">
           <div className="rounded-3xl border border-gray-200 bg-slate-50 p-4">
             <div className="flex flex-wrap items-center gap-2 mb-3">
               <button
@@ -239,7 +240,11 @@ const QuestionForm = ({
             </div>
             <div className="text-xs text-gray-500">Chọn ô nhập và nhấn nút để áp dụng định dạng HTML.</div>
           </div>
+        </div>
 
+        {/* Nội dung chính - cuộn được */}
+        <div className="flex-1 overflow-auto px-6 py-4">
+        <div className="space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Mức độ</label>
@@ -455,8 +460,12 @@ const QuestionForm = ({
               </div>
             </div>
           </div>
+        </div>
+        </div>
 
-          <div className="flex flex-col sm:flex-row sm:justify-end gap-3 pt-4 border-t border-gray-200 mt-4">
+        {/* Nút hành động - sticky dưới cùng */}
+        <div className="sticky bottom-0 z-10 bg-white px-6 py-4 border-t border-gray-200 flex-shrink-0 rounded-b-3xl">
+          <div className="flex flex-col sm:flex-row sm:justify-end gap-3">
             <button
               type="button"
               onClick={onClose}

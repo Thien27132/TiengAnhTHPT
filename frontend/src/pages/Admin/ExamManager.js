@@ -213,26 +213,61 @@ const ExamManager = () => {
       }
   };
 
+  const [examSearch, setExamSearch] = useState('');
+  const [examLevelFilter, setExamLevelFilter] = useState('');
+
+  const filteredExams = exams.filter(exam => {
+    const matchSearch = !examSearch || exam.ExamName?.toLowerCase().includes(examSearch.toLowerCase());
+    const matchLevel = !examLevelFilter || exam.Level === examLevelFilter;
+    return matchSearch && matchLevel;
+  });
+
   return (
     <div className="bg-white rounded-xl shadow-sm p-6 relative">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-800">Quản lý đề thi</h2>
-          <p className="text-gray-500 text-sm">Danh sách các bộ đề thi THPT Quốc gia</p>
+      {/* Header + Search - Sticky */}
+      <div className="sticky top-0 z-10 bg-white pb-4 -mx-6 px-6 pt-0 border-b border-gray-100">
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800">Quản lý đề thi</h2>
+            <p className="text-gray-500 text-sm">Danh sách các bộ đề thi THPT Quốc gia</p>
+          </div>
+          {/* Nút này đã được gắn sự kiện mở Modal */}
+          <button 
+              onClick={() => setIsModalOpen(true)}
+              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center space-x-2"
+          >
+            <Plus size={18} />
+            <span>Tạo đề thi mới</span>
+          </button>
         </div>
-        {/* Nút này đã được gắn sự kiện mở Modal */}
-        <button 
-            onClick={() => setIsModalOpen(true)}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center space-x-2"
-        >
-          <Plus size={18} />
-          <span>Tạo đề thi mới</span>
-        </button>
+
+        <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-4">
+          <div>
+            <input
+              value={examSearch}
+              onChange={(e) => setExamSearch(e.target.value)}
+              placeholder="Tìm kiếm đề thi..."
+              className="w-full rounded-2xl border border-gray-300 px-4 py-3 outline-none focus:ring-green-500 focus:border-green-500"
+            />
+          </div>
+          <div>
+            <select
+              value={examLevelFilter}
+              onChange={(e) => setExamLevelFilter(e.target.value)}
+              className="w-full rounded-2xl border border-gray-300 px-4 py-3 outline-none focus:ring-green-500 focus:border-green-500"
+            >
+              <option value="">Tất cả mức độ</option>
+              <option value="Dễ">Dễ</option>
+              <option value="Trung bình">Trung bình</option>
+              <option value="Khó">Khó</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       {/* GIỮ NGUYÊN GIAO DIỆN GRID CỦA BẠN VÌ NÓ RẤT ĐẸP */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {exams.map((exam) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-4">
+        {filteredExams.map((exam) => (
           <div key={exam.ExamID} className="border border-gray-100 rounded-xl p-5 hover:shadow-md transition bg-gray-50 relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition flex gap-1">
                <button 

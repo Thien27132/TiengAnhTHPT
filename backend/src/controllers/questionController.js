@@ -116,7 +116,7 @@ const createQuestion = async (req, res) => {
 
 const getAllQuestions = async (req, res) => {
     try {
-        const { type, q } = req.query;
+        const { type, q, level } = req.query;
         let queryStr = `
             SELECT q.*, ISNULL(child.ChildCount, 0) AS ChildCount,
                 (SELECT t.TagID, t.TagName, s.SkillName FROM Tags t
@@ -136,6 +136,11 @@ const getAllQuestions = async (req, res) => {
         if (type) {
             queryStr += ` AND q.QuestionType = @typeParam`;
             request.input('typeParam', sql.NVarChar, type);
+        }
+
+        if (level) {
+            queryStr += ` AND q.Level = @levelParam`;
+            request.input('levelParam', sql.NVarChar, level);
         }
 
         if (q) {

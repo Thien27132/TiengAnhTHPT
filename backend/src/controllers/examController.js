@@ -105,10 +105,17 @@ const createExam = async (req, res) => {
             }
         }
 
+        // Đếm chỉ các câu hỏi con (không tính passage/đoạn văn)
+        const countResult = await sql.query`
+            SELECT COUNT(*) AS ChildCount FROM Exam_Questions eq
+            JOIN Questions q ON eq.QuestionID = q.QuestionID
+            WHERE eq.ExamID = ${examId} AND q.IsPassage = 0`;
+        const childOnlyCount = countResult.recordset[0].ChildCount;
+
         res.status(201).json({ 
             message: 'Tạo đề thành công!', 
             examId, 
-            totalInserted: finalQuestionIds.length 
+            totalInserted: childOnlyCount
         });
     } catch (err) {
         console.error('createExam error:', err);

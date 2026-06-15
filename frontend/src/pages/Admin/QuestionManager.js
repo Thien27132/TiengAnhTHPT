@@ -12,6 +12,7 @@ const QuestionManager = () => {
   const [tags, setTags] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('');
+  const [selectedLevel, setSelectedLevel] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -73,6 +74,7 @@ const QuestionManager = () => {
     try {
       const params = new URLSearchParams();
       if (selectedType) params.set('type', selectedType);
+      if (selectedLevel) params.set('level', selectedLevel);
       if (searchTerm.trim()) params.set('q', searchTerm.trim());
       const url = `/questions${params.toString() ? `?${params.toString()}` : ''}`;
       const data = await axiosClient.get(url);
@@ -80,7 +82,7 @@ const QuestionManager = () => {
     } catch (err) {
       console.error('Lỗi lấy danh sách câu hỏi', err);
     }
-  }, [selectedType, searchTerm]);
+  }, [selectedType, selectedLevel, searchTerm]);
 
   useEffect(() => {
     const loadInitial = async () => {
@@ -195,10 +197,10 @@ const QuestionManager = () => {
 
       if (editingId) {
         await axiosClient.put(`/questions/${editingId}`, payload);
-        alert('Cập nhật câu hỏi thành công');
+        alert(`Cập nhật thành công! (${form.questions.length} câu hỏi)`);
       } else {
         await axiosClient.post('/questions', payload);
-        alert('Thêm câu hỏi thành công');
+        alert(`Thêm thành công! (${form.questions.length} câu hỏi)`);
       }
 
       setIsModalOpen(false);
@@ -230,54 +232,70 @@ const QuestionManager = () => {
 
   return (
     <div className="bg-white rounded-xl shadow-sm p-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-800">Ngân hàng câu hỏi</h2>
-          <p className="text-sm text-gray-500 mt-1">Quản lý tìm kiếm, lọc, và tạo đề bài theo loại.</p>
-        </div>
-        <button
-          onClick={() => {
-            resetForm();
-            setIsModalOpen(true);
-          }}
-          className="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition"
-        >
-          <Plus size={18} />
-          Thêm câu hỏi mới
-        </button>
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-[2fr_1fr] gap-4 mb-6">
-        <div className="flex items-center gap-3">
-          <input
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Tìm kiếm đề bài hoặc nội dung..."
-            className="w-full rounded-2xl border border-gray-300 px-4 py-3 outline-none focus:ring-indigo-500 focus:border-indigo-500"
-          />
+      {/* Header + Search - Sticky */}
+      <div className="sticky top-0 z-10 bg-white pb-4 -mx-6 px-6 pt-0 border-b border-gray-100">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800">Ngân hàng câu hỏi</h2>
+            <p className="text-sm text-gray-500 mt-1">Quản lý tìm kiếm, lọc, và tạo đề bài theo loại.</p>
+          </div>
           <button
-            onClick={fetchQuestions}
-            className="inline-flex items-center justify-center rounded-2xl bg-indigo-600 px-4 py-3 text-white hover:bg-indigo-700 transition"
+            onClick={() => {
+              resetForm();
+              setIsModalOpen(true);
+            }}
+            className="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition"
           >
-            Tìm
+            <Plus size={18} />
+            Thêm câu hỏi mới
           </button>
         </div>
-        <div className="flex items-center gap-3">
-          <select
-            value={selectedType}
-            onChange={(e) => setSelectedType(e.target.value)}
-            className="w-full rounded-2xl border border-gray-300 px-4 py-3 outline-none focus:ring-indigo-500 focus:border-indigo-500"
-          >
-            <option value="">Tất cả loại</option>
-            <option value="Leaflet">Leaflet</option>
-            <option value="Ordering">Ordering</option>
-            <option value="Context_Filling">Context Filling</option>
-            <option value="Reading_8">Reading 8</option>
-            <option value="Reading_10">Reading 10</option>
-          </select>
+
+        <div className="grid grid-cols-1 xl:grid-cols-[2fr_1fr_1fr] gap-4">
+          <div className="flex items-center gap-3">
+            <input
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Tìm kiếm đề bài hoặc nội dung..."
+              className="w-full rounded-2xl border border-gray-300 px-4 py-3 outline-none focus:ring-indigo-500 focus:border-indigo-500"
+            />
+            <button
+              onClick={fetchQuestions}
+              className="inline-flex items-center justify-center rounded-2xl bg-indigo-600 px-4 py-3 text-white hover:bg-indigo-700 transition"
+            >
+              Tìm
+            </button>
+          </div>
+          <div className="flex items-center gap-3">
+            <select
+              value={selectedType}
+              onChange={(e) => setSelectedType(e.target.value)}
+              className="w-full rounded-2xl border border-gray-300 px-4 py-3 outline-none focus:ring-indigo-500 focus:border-indigo-500"
+            >
+              <option value="">Tất cả loại</option>
+              <option value="Leaflet">Leaflet</option>
+              <option value="Ordering">Ordering</option>
+              <option value="Context_Filling">Context Filling</option>
+              <option value="Reading_8">Reading 8</option>
+              <option value="Reading_10">Reading 10</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-3">
+            <select
+              value={selectedLevel}
+              onChange={(e) => setSelectedLevel(e.target.value)}
+              className="w-full rounded-2xl border border-gray-300 px-4 py-3 outline-none focus:ring-indigo-500 focus:border-indigo-500"
+            >
+              <option value="">Tất cả mức độ</option>
+              <option value="Dễ">Dễ</option>
+              <option value="Trung bình">Trung bình</option>
+              <option value="Khó">Khó</option>
+            </select>
+          </div>
         </div>
       </div>
 
+      <div className="pt-4">
       <QuestionList
         questions={questions}
         expandedRows={expandedRows}
@@ -288,6 +306,7 @@ const QuestionManager = () => {
         onDelete={handleDeleteQuestion}
         onViewDetail={handleViewDetail}
       />
+      </div>
 
       <QuestionForm
         isModalOpen={isModalOpen}
