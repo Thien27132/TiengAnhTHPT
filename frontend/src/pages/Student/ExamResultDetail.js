@@ -398,21 +398,6 @@ const ExamResultDetail = () => {
         </div>
         )}
 
-        {/* Action Buttons */}
-        <div className="mt-8 flex gap-4 justify-center">
-          <button
-            onClick={() => navigate('/exam-history')}
-            className="px-6 py-3 bg-gray-200 text-gray-800 rounded-xl hover:bg-gray-300 transition font-semibold"
-          >
-            Quay lại lịch sử thi
-          </button>
-          <button
-            onClick={() => navigate('/exams')}
-            className="px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition font-semibold"
-          >
-            Làm bài thi khác
-          </button>
-        </div>
       </div>
     </div>
   );

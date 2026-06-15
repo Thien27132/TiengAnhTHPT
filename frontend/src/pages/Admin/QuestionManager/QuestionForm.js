@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { getDefaultPrompt, getRequiredQuestionCount, normalizeQuestionCount, createEmptyQuestion } from './utils';
 
 const QuestionForm = ({
@@ -12,7 +12,7 @@ const QuestionForm = ({
   onSave
 }) => {
   const textareaRefs = useRef({});
-  const [activeField, setActiveField] = React.useState('passage');
+  const [activeField, setActiveField] = useState('');
 
   const updateFormFieldValue = (fieldKey, value) => {
     setForm((prev) => {
@@ -105,6 +105,39 @@ const QuestionForm = ({
       return { ...prev, questions };
     });
   };
+
+  const getFieldHtml = (fieldKey) => {
+    if (fieldKey === 'passage') return form.passage || '';
+
+    const parts = fieldKey.split('.');
+    if (parts[0] !== 'questions') return '';
+
+    const questionIndex = Number(parts[1]);
+    const questionItem = form.questions[questionIndex];
+    if (!questionItem) return '';
+
+    if (parts[2] === 'question') {
+      return questionItem.question || '';
+    }
+
+    if (parts[2] === 'answers') {
+      const answerIndex = Number(parts[3]);
+      const answerItem = questionItem.answers[answerIndex];
+      return answerItem ? answerItem[parts[4]] || '' : '';
+    }
+
+    return '';
+  };
+
+  useEffect(() => {
+    Object.entries(textareaRefs.current).forEach(([fieldKey, el]) => {
+      if (!el || activeField === fieldKey) return;
+      const html = getFieldHtml(fieldKey);
+      if (el.innerHTML !== html) {
+        el.innerHTML = html;
+      }
+    });
+  }, [form, activeField]);
 
   const toggleQuestionTag = (questionIndex, tagId) => {
     setForm((prev) => {
@@ -252,14 +285,18 @@ const QuestionForm = ({
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Đoạn văn</label>
               <div
-                ref={(el) => { textareaRefs.current.passage = el; }}
+                ref={(el) => {
+                  textareaRefs.current.passage = el;
+                  if (el && activeField !== 'passage') {
+                    el.innerHTML = form.passage || '';
+                  }
+                }}
                 onFocus={() => setActiveField('passage')}
+                onBlur={() => setActiveField('')}
                 contentEditable
                 suppressContentEditableWarning
                 onInput={(e) => updateFormFieldValue('passage', e.currentTarget.innerHTML)}
-                className="min-h-[150px] w-full rounded-3xl border border-gray-300 p-4 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                placeholder="Nhập đoạn văn cho bài đọc. Có thể để trống nếu dạng Ordering."
-                dangerouslySetInnerHTML={{ __html: form.passage }}
+                className="min-h-[150px] w-full rounded-3xl border border-gray-300 p-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 whitespace-pre-wrap break-words"
               />
               <p className="mt-2 text-xs text-gray-500">Dùng các nút In đậm, Nghiêng, Gạch chân, Căn giữa, Thụt lề để định dạng nội dung và xem trực quan. HTML chỉ lưu khi gửi.</p>
             </div>
@@ -295,13 +332,18 @@ const QuestionForm = ({
                               <span className="text-xs text-gray-500">Chọn đúng 1 đáp án</span>
                             </div>
                             <div
-                              ref={(el) => { textareaRefs.current[`questions.${questionIndex}.question`] = el; }}
+                              ref={(el) => {
+                                textareaRefs.current[`questions.${questionIndex}.question`] = el;
+                                if (el && activeField !== `questions.${questionIndex}.question`) {
+                                  el.innerHTML = questionItem.question || '';
+                                }
+                              }}
                               onFocus={() => setActiveField(`questions.${questionIndex}.question`)}
+                              onBlur={() => setActiveField('')}
                               contentEditable
                               suppressContentEditableWarning
                               onInput={(e) => updateFormFieldValue(`questions.${questionIndex}.question`, e.currentTarget.innerHTML)}
-                              className="mt-3 min-h-[60px] w-full rounded-3xl border border-gray-300 p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                              dangerouslySetInnerHTML={{ __html: questionItem.question }}
+                              className="mt-3 min-h-[60px] w-full rounded-3xl border border-gray-300 p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 whitespace-pre-wrap break-words"
                               placeholder="Nội dung câu hỏi (có thể để trống cho Ordering)"
                             />
                           </div>
@@ -320,26 +362,36 @@ const QuestionForm = ({
                                 <div className="col-span-12 sm:col-span-5">
                                   <div className="text-xs font-semibold text-gray-600">Đáp án {answerIndex + 1}</div>
                                   <div
-                                    ref={(el) => { textareaRefs.current[`questions.${questionIndex}.answers.${answerIndex}.content`] = el; }}
+                                    ref={(el) => {
+                                      textareaRefs.current[`questions.${questionIndex}.answers.${answerIndex}.content`] = el;
+                                      if (el && activeField !== `questions.${questionIndex}.answers.${answerIndex}.content`) {
+                                        el.innerHTML = answer.content || '';
+                                      }
+                                    }}
                                     onFocus={() => setActiveField(`questions.${questionIndex}.answers.${answerIndex}.content`)}
+                                    onBlur={() => setActiveField('')}
                                     contentEditable
                                     suppressContentEditableWarning
                                     onInput={(e) => handleAnswerFieldChange(questionIndex, answerIndex, 'content', e.currentTarget.innerHTML)}
-                                    className="mt-2 min-h-[60px] w-full rounded-3xl border border-gray-300 p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                    dangerouslySetInnerHTML={{ __html: answer.content }}
+                                    className="mt-2 min-h-[60px] w-full rounded-3xl border border-gray-300 p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 whitespace-pre-wrap break-words"
                                     placeholder={`Đáp án ${answerIndex + 1}`}
                                   />
                                 </div>
                                 <div className="col-span-12 sm:col-span-6">
                                   <div className="text-xs font-semibold text-gray-600">Giải thích</div>
                                   <div
-                                    ref={(el) => { textareaRefs.current[`questions.${questionIndex}.answers.${answerIndex}.explanation`] = el; }}
+                                    ref={(el) => {
+                                      textareaRefs.current[`questions.${questionIndex}.answers.${answerIndex}.explanation`] = el;
+                                      if (el && activeField !== `questions.${questionIndex}.answers.${answerIndex}.explanation`) {
+                                        el.innerHTML = answer.explanation || '';
+                                      }
+                                    }}
                                     onFocus={() => setActiveField(`questions.${questionIndex}.answers.${answerIndex}.explanation`)}
+                                    onBlur={() => setActiveField('')}
                                     contentEditable
                                     suppressContentEditableWarning
                                     onInput={(e) => handleAnswerFieldChange(questionIndex, answerIndex, 'explanation', e.currentTarget.innerHTML)}
-                                    className="mt-2 min-h-[60px] w-full rounded-3xl border border-gray-300 p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                    dangerouslySetInnerHTML={{ __html: answer.explanation }}
+                                    className="mt-2 min-h-[60px] w-full rounded-3xl border border-gray-300 p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 whitespace-pre-wrap break-words"
                                     placeholder="Giải thích (tùy chọn)"
                                   />
                                 </div>

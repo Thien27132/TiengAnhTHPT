@@ -24,13 +24,15 @@ const ExamManager = () => {
       selectedQuestionIds: []
   });
 
-  // Ràng buộc số lượng bài theo loại
+  // Ràng buộc số lượng theo loại
+  // Ordering: đếm theo tổng số câu con (ChildCount) → cần đủ 5 câu
+  // Các loại khác: đếm theo số bài (parent questions)
   const EXAM_REQUIREMENTS = {
-    Leaflet: 2,
-    Ordering: 5, // số câu, không phải số bài
-    Context_Filling: 1,
-    Reading_8: 1,
-    Reading_10: 1
+    Leaflet: { count: 2, unit: 'bài' },        // 2 bài × 6 câu = 12 câu
+    Ordering: { count: 5, unit: 'câu' },        // gộp các bài Ordering → cần đủ 5 câu con
+    Context_Filling: { count: 1, unit: 'bài' }, // 1 bài × 5 câu = 5 câu
+    Reading_8: { count: 1, unit: 'bài' },       // 1 bài × 8 câu = 8 câu
+    Reading_10: { count: 1, unit: 'bài' }       // 1 bài × 10 câu = 10 câu
   };
 
   // Hàm kiểm tra ràng buộc số lượng câu hỏi
@@ -43,7 +45,13 @@ const ExamManager = () => {
       if (!typeCounts[type]) {
         typeCounts[type] = 0;
       }
-      typeCounts[type] += 1;
+      // Ordering: đếm tổng số câu con (ChildCount)
+      // Các loại khác: đếm số bài (mỗi parent = 1)
+      if (type === 'Ordering') {
+        typeCounts[type] += (question.ChildCount || 0);
+      } else {
+        typeCounts[type] += 1;
+      }
     });
 
     const errors = [];
@@ -51,13 +59,13 @@ const ExamManager = () => {
 
     // Kiểm tra từng loại
     Object.keys(EXAM_REQUIREMENTS).forEach(type => {
-      const required = EXAM_REQUIREMENTS[type];
+      const { count: required, unit } = EXAM_REQUIREMENTS[type];
       const selected = typeCounts[type] || 0;
 
       if (selected < required) {
-        errors.push(`${type}: cần ${required} câu, hiện tại ${selected} câu`);
+        errors.push(`${type}: cần ${required} ${unit}, hiện tại ${selected} ${unit}`);
       } else if (selected > required) {
-        warnings.push(`${type}: vượt quá ${required} câu, hiện tại ${selected} câu`);
+        warnings.push(`${type}: vượt quá ${required} ${unit}, hiện tại ${selected} ${unit}`);
       }
     });
 
@@ -420,15 +428,18 @@ const ExamManager = () => {
               <h3 className="text-sm font-semibold text-blue-800 mb-2">Tóm tắt câu hỏi đã chọn:</h3>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-sm">
                 {Object.keys(EXAM_REQUIREMENTS).map(type => {
-                  const selected = bankQuestions.filter(q => formData.selectedQuestionIds.includes(q.QuestionID) && q.QuestionType === type).length;
-                  const required = EXAM_REQUIREMENTS[type];
+                  const selectedOfType = bankQuestions.filter(q => formData.selectedQuestionIds.includes(q.QuestionID) && q.QuestionType === type);
+                  // Ordering: đếm tổng số câu con, các loại khác: đếm số bài
+                  const selected = type === 'Ordering'
+                    ? selectedOfType.reduce((sum, q) => sum + (q.ChildCount || 0), 0)
+                    : selectedOfType.length;
+                  const { count: required, unit } = EXAM_REQUIREMENTS[type];
                   const isValid = selected >= required;
                   const isOver = selected > required;
-                  const unitLabel = type === 'Ordering' ? 'câu' : 'bài';
                   return (
                     <div key={type} className={`p-2 rounded ${isValid ? (isOver ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800') : 'bg-red-100 text-red-800'}`}>
                       <div className="font-medium">{type}</div>
-                      <div className="text-xs">{selected}/{required} {unitLabel}</div>
+                      <div className="text-xs">{selected}/{required} {unit}</div>
                     </div>
                   );
                 })}

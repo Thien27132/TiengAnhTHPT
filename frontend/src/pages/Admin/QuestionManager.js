@@ -29,14 +29,15 @@ const QuestionManager = () => {
   });
 
   const resetForm = () => {
+    const defaultType = 'Leaflet';
     setForm({
-      prompt: '',
+      prompt: getDefaultPrompt(defaultType),
       passage: '',
       level: 'Trung bình',
-      questionType: '',
+      questionType: defaultType,
       tagIds: [],
       tagSearch: '',
-      questions: []
+      questions: normalizeQuestionCount([], getRequiredQuestionCount(defaultType))
     });
     setEditingId(null);
   };
@@ -111,12 +112,12 @@ const QuestionManager = () => {
       const normalizedQuestions = normalizeQuestionCount(
         (data.questions || []).map((item) => ({
           question: item.questionContent || '',
-          answers: item.answers.map((ans) => ({
-            content: ans.AnswerContent || '',
-            isCorrect: ans.IsCorrect === 1,
-            explanation: ans.Explanation || ''
+          answers: (item.answers || []).map((ans) => ({
+            content: ans.AnswerContent || ans.content || '',
+            isCorrect: Boolean(ans.IsCorrect) || Boolean(ans.isCorrect),
+            explanation: ans.Explanation || ans.explanation || ''
           })),
-          tagIds: item.tagIds || [],
+          tagIds: item.tagIds && Array.isArray(item.tagIds) ? item.tagIds : [],
           tagSearch: ''
         })),
         count

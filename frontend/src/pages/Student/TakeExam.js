@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import axiosClient from '../../api/axiosClient';
 
 // Helper function to parse Content from JSON format
@@ -31,6 +31,9 @@ const getExamProgressKey = (examId) => `exam-progress-${examId}`;
 const TakeExam = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
+    const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+    const shouldStartFresh = searchParams.get('newAttempt') === 'true';
     
     const [examData, setExamData] = useState(null);
     const [timeLeft, setTimeLeft] = useState(0);
@@ -93,7 +96,7 @@ const TakeExam = () => {
                 // Preserve the original order from the teacher
                 const orderedQuestions = finalQuestions;
 
-                const savedProgress = (() => {
+                const savedProgress = shouldStartFresh ? null : (() => {
                     try {
                         const saved = localStorage.getItem(getExamProgressKey(id));
                         if (!saved) return null;
@@ -105,6 +108,10 @@ const TakeExam = () => {
                         return null;
                     }
                 })();
+
+                if (shouldStartFresh) {
+                    localStorage.removeItem(getExamProgressKey(id));
+                }
 
                 setExamData({ ...data.exam, questions: orderedQuestions });
                 setTimeLeft(savedProgress?.timeLeft ?? (data.exam?.Duration || 0) * 60);

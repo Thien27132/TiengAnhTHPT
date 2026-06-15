@@ -11,6 +11,17 @@ const getRequiredQuestionCount = (questionType) => {
     return mapping[questionType] || null;
 };
 
+const getDefaultPromptText = (questionType) => {
+    const mapping = {
+        Leaflet: 'Read the following leaflet/advertisement and mark a one on your answer sheet to indicate the best fit for each numbered blank.',
+        Ordering: 'Mark a one on your answer sheet to indicate the best way to arrange sentences or words to form a meaningful dialogue or text for each of the following questions.',
+        Context_Filling: 'Read the following passage and mark one on your answer sheet to indicate the best option for each numbered blank.',
+        Reading_8: 'Read the following passage and mark one on your answer sheet to indicate the correct answer for each question.',
+        Reading_10: 'Read the following passage and mark a one on your answer sheet to indicate the best answer for each of the following questions.'
+    };
+    return mapping[questionType] || '';
+};
+
 const parseParentContent = (content) => {
     if (!content) return null;
     try {
@@ -19,10 +30,10 @@ const parseParentContent = (content) => {
             return parsed;
         }
     } catch (error) {
-        // Nếu nội dung không phải JSON, xem nó như prompt thô
-        return { prompt: content, passage: '' };
+        // Nếu nội dung không phải JSON, xem nó như passage (đoạn văn), không phải prompt
+        return { prompt: '', passage: content };
     }
-    return { prompt: content, passage: '' };
+    return { prompt: '', passage: content };
 };
 
 const buildParentContent = (prompt, passage) => {
@@ -142,10 +153,11 @@ const getAllQuestions = async (req, res) => {
 
         const data = result.recordset.map(item => {
             const parsedContent = parseParentContent(item.Content);
+            const defaultPrompt = getDefaultPromptText(item.QuestionType);
             return {
                 ...item,
                 Tags: item.Tags ? JSON.parse(item.Tags) : [],
-                Prompt: parsedContent?.prompt || item.Content || '',
+                Prompt: parsedContent?.prompt || defaultPrompt || '',
                 Passage: parsedContent?.passage || '',
                 ChildCount: item.ChildCount || 0
             };
@@ -229,10 +241,11 @@ const getQuestionById = async (req, res) => {
         });
 
         const parsedContent = parseParentContent(parentQuestion.Content);
+        const defaultPrompt = getDefaultPromptText(parentQuestion.QuestionType);
 
         res.json({
             questionId: parentId,
-            prompt: parsedContent?.prompt || '',
+            prompt: parsedContent?.prompt || defaultPrompt || '',
             passage: parsedContent?.passage || '',
             rawContent: parentQuestion.Content || '',
             level: parentQuestion.Level,

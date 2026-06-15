@@ -23,36 +23,75 @@ const createExam = async (req, res) => {
         if (selectedQuestionIds && Array.isArray(selectedQuestionIds) && selectedQuestionIds.length > 0) {
             const request = new sql.Request();
             const inClause = buildInClause(selectedQuestionIds, request);
+            // Get all selected questions without complex ORDER BY
             const queryText = `
-                SELECT QuestionID FROM Questions
-                WHERE QuestionID IN (${inClause}) OR ParentID IN (${inClause})
-                ORDER BY IsPassage DESC, QuestionID ASC`;
+                SELECT QuestionID, ParentID, IsPassage FROM Questions
+                WHERE QuestionID IN (${inClause}) OR ParentID IN (${inClause})`;
             const result = await request.query(queryText);
-            finalQuestionIds = result.recordset.map(q => q.QuestionID);
+            
+            // Sort questions: passages first, then their child questions in order
+            const passages = [];
+            const childQuestionsMap = {};
+            
+            result.recordset.forEach(q => {
+                if (q.IsPassage) {
+                    passages.push(q.QuestionID);
+                    childQuestionsMap[q.QuestionID] = [];
+                } else if (q.ParentID) {
+                    if (!childQuestionsMap[q.ParentID]) {
+                        childQuestionsMap[q.ParentID] = [];
+                    }
+                    childQuestionsMap[q.ParentID].push(q.QuestionID);
+                }
+            });
+            
+            // Build final order: passage + its children, repeat for next passage
+            finalQuestionIds = [];
+            for (const pId of passages) {
+                finalQuestionIds.push(pId);
+                if (childQuestionsMap[pId]) {
+                    finalQuestionIds.push(...childQuestionsMap[pId]);
+                }
+            }
         } else {
-            const matrix = [
-                { type: 'Leaflet', count: 2 },
-                { type: 'Ordering', count: 1 },
-                { type: 'Context_Filling', count: 1 },
-                { type: 'Reading_8', count: 1 },
-                { type: 'Reading_10', count: 1 }
+            // Define question types to fetch in order to reach ~40 total questions
+            const questionTypes = [
+                'Leaflet',
+                'Ordering',
+                'Context_Filling',
+                'Reading_8',
+                'Reading_10'
             ];
 
-            for (const item of matrix) {
+            let targetCount = 40;
+            let currentCount = 0;
+
+            // First pass: get a baseline from each type
+            for (const type of questionTypes) {
+                if (currentCount >= targetCount) break;
+
                 const randomPassages = await sql.query`
-                    SELECT TOP (${item.count}) QuestionID FROM Questions 
-                    WHERE QuestionType = ${item.type} AND IsPassage = 1 AND Level = ${level}
+                    SELECT TOP (10) QuestionID FROM Questions 
+                    WHERE QuestionType = ${type} AND IsPassage = 1 AND Level = ${level}
                     ORDER BY NEWID()`;
 
                 if (randomPassages.recordset.length > 0) {
                     for (const p of randomPassages.recordset) {
+                        if (currentCount >= targetCount) break;
+                        
                         const pId = p.QuestionID;
+                        finalQuestionIds.push(pId);
+                        currentCount++;
+                        
+                        // Get all child questions for this passage
                         const relatedQuestions = await sql.query`
                             SELECT QuestionID FROM Questions 
-                            WHERE QuestionID = ${pId} 
-                            OR ParentID = ${pId}
-                            ORDER BY IsPassage DESC, QuestionID ASC`;
+                            WHERE ParentID = ${pId}
+                            ORDER BY QuestionID ASC`;
+                        
+                        const childCount = relatedQuestions.recordset.length;
                         finalQuestionIds.push(...relatedQuestions.recordset.map(q => q.QuestionID));
+                        currentCount += childCount;
                     }
                 }
             }
