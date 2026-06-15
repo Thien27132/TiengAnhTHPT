@@ -17,7 +17,7 @@ INSERT INTO Resources (Title, Type, ContentURL, TagID, UploadedBy, CreatedAt) VA
 (N'Tài liệu ôn tập - Thì quá khứ tiếp diễn', 'pdf', '/documents/THI-QUA-KHU-TIEP-DIEN.pdf', 8, 1, GETDATE()),
 (N'Tài liệu ôn tập - Thì quá khứ hoàn thành', 'pdf', '/documents/THI-QUA-KHU-HOAN-THANH.pdf', 9, 1, GETDATE()),
 (N'Tài liệu ôn tập - Thì tương lai tiếp diễn', 'pdf', '/documents/THI-TUONG-LAI-TIEP-DIEN.pdf', 10, 1, GETDATE()),
-(N'Tài liệu ôn tập - Thì tương lai hoàn thành', 'pdf', '/documents/THI-TUONG-LAI-HOAN-THANH.pdf', 11, 1, GETDATE()),
+(N'Tài liệu ôn tập - Thì tương lai gần', 'pdf', '/documents/THI-TUONG-LAI-GAN.pdf', 11, 1, GETDATE()),
 (N'Tài liệu ôn tập - Thì tương lai hoàn thành tiếp diễn', 'pdf', '/documents/THI-TUONG-LAI-HOAN-THANH-TIEP-DIEN.pdf', 12, 1, GETDATE()),
 (N'Tài liệu ôn tập - Câu so sánh', 'pdf', '/documents/CAU-SO-SANH.pdf', 13, 1, GETDATE()),
 (N'Tài liệu ôn tập - Câu điều kiện', 'pdf', '/documents/CAU-DIEU-KIEN.pdf', 14, 1, GETDATE()),
