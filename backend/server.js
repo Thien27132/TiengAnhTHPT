@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 require('dotenv').config();
 const { connectDB } = require('./src/config/db');
 
@@ -9,6 +10,7 @@ const tagRoutes = require('./src/routes/tagRoutes');
 const questionRoutes = require('./src/routes/questionRoutes');
 const examRoutes = require('./src/routes/examRoutes');
 const analysisRoutes = require('./src/routes/analysisRoutes');
+const resourceRoutes = require('./src/routes/resourceRoutes');
 
 const app = express();
 
@@ -17,12 +19,16 @@ app.use(cors());
 app.use(express.json()); 
 app.use(express.urlencoded({ extended: true }));
 
+// Serve tài liệu PDF tĩnh
+app.use('/documents', express.static(path.join(__dirname, 'public/documents')));
+
 // --- CÁC ROUTE (ĐỂ SAU MIDDLEWARE) ---
 app.use('/api/exams', examRoutes);
 app.use('/api/tags', tagRoutes);
 app.use('/api/questions', questionRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/analysis', analysisRoutes);
+app.use('/api/resources', resourceRoutes);
 
 // Kết nối DB
 connectDB();

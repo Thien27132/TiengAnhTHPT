@@ -221,11 +221,14 @@ const getIncorrectAnswersWithTags = async (req, res) => {
                 a_correct.AnswerContent AS CorrectAnswer,
                 a_correct.Explanation AS Explanation,
                 t.TagID,
-                t.TagName
+                t.TagName,
+                r.ContentURL AS DocumentURL,
+                r.Title AS DocumentTitle
             FROM ResultDetail rd
             INNER JOIN Questions q ON rd.QuestionID = q.QuestionID
             LEFT JOIN Question_Tags qt ON q.QuestionID = qt.QuestionID
             LEFT JOIN Tags t ON qt.TagID = t.TagID
+            LEFT JOIN Resources r ON t.TagID = r.TagID
             LEFT JOIN Answers a_selected ON rd.SelectedAnswerID = a_selected.AnswerID
             LEFT JOIN Answers a_correct ON q.QuestionID = a_correct.QuestionID AND a_correct.IsCorrect = 1
             WHERE rd.ResultID = ${parsedResultId} AND rd.IsCorrect = 0
@@ -260,10 +263,14 @@ const getIncorrectAnswersWithTags = async (req, res) => {
                     };
                 }
 
-                // Thêm tag nếu tồn tại
+                // Thêm tag nếu tồn tại (giờ bao gồm cả documentUrl)
                 if (row.TagName && row.TagName.trim()) {
-                    if (!processedQuestions[questionKey].tags.find(t => t === row.TagName)) {
-                        processedQuestions[questionKey].tags.push(row.TagName);
+                    if (!processedQuestions[questionKey].tags.find(t => t.name === row.TagName)) {
+                        processedQuestions[questionKey].tags.push({
+                            name: row.TagName,
+                            documentUrl: row.DocumentURL || null,
+                            documentTitle: row.DocumentTitle || null
+                        });
                     }
                 }
             });
@@ -274,11 +281,16 @@ const getIncorrectAnswersWithTags = async (req, res) => {
 
                 // Nhóm theo tag
                 item.tags.forEach(tag => {
-                    if (!groupedByTag[tag]) {
-                        groupedByTag[tag] = [];
+                    const tagName = tag.name;
+                    if (!groupedByTag[tagName]) {
+                        groupedByTag[tagName] = {
+                            questions: [],
+                            documentUrl: tag.documentUrl,
+                            documentTitle: tag.documentTitle
+                        };
                     }
-                    if (!groupedByTag[tag].find(q => q.questionId === item.questionId)) {
-                        groupedByTag[tag].push(item);
+                    if (!groupedByTag[tagName].questions.find(q => q.questionId === item.questionId)) {
+                        groupedByTag[tagName].questions.push(item);
                     }
                 });
             });

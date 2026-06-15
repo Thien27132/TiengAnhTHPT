@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Play, History, Award } from 'lucide-react'; // Đã xóa User ở đây
 import StudentAnalytics from './StudentAnalytics';
+import RecommendedDocuments from './RecommendedDocuments';
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
@@ -75,6 +76,9 @@ const StudentDashboard = () => {
         </div>
 
         <StudentAnalytics studentId={user.UserID} />
+
+        {/* Section: Tài liệu gợi ý */}
+        <RecommendedDocuments studentId={user.UserID} />
 
         {/* Section: Điểm số cao */}
         <div className="mt-12 bg-indigo-900 rounded-3xl p-8 text-white flex items-center justify-between overflow-hidden relative">

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axiosClient from '../../api/axiosClient';
-import { X, Check, AlertCircle, BookOpen } from 'lucide-react';
+import { X, Check, AlertCircle, BookOpen, FileText, ExternalLink } from 'lucide-react';
 
 // Helper: strip HTML tags và decode HTML entities
 const stripHtml = (html) => {
@@ -8,6 +8,9 @@ const stripHtml = (html) => {
   const doc = new DOMParser().parseFromString(html, 'text/html');
   return doc.body.textContent || '';
 };
+
+// Base URL cho backend
+const BACKEND_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const IncorrectAnswersReview = ({ resultId }) => {
   const [data, setData] = useState(null);
@@ -44,6 +47,13 @@ const IncorrectAnswersReview = ({ resultId }) => {
       ...prev,
       [questionId]: !prev[questionId]
     }));
+  };
+
+  // Mở tài liệu PDF trong tab mới
+  const openDocument = (documentUrl) => {
+    if (documentUrl) {
+      window.open(`${BACKEND_URL}${documentUrl}`, '_blank');
+    }
   };
 
   if (loading) {
@@ -171,7 +181,7 @@ const IncorrectAnswersReview = ({ resultId }) => {
                           key={idx}
                           className="inline-block px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded font-medium"
                         >
-                          🏷️ {tag}
+                          🏷️ {typeof tag === 'object' ? tag.name : tag}
                         </span>
                       ))}
                     </div>
@@ -213,6 +223,30 @@ const IncorrectAnswersReview = ({ resultId }) => {
                         />
                       </div>
                     )}
+
+                    {/* Tài liệu gợi ý cho câu này */}
+                    {item.tags.some(tag => (typeof tag === 'object' ? tag.documentUrl : null)) && (
+                      <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded p-3 border border-purple-200">
+                        <p className="text-xs font-semibold text-purple-700 uppercase mb-2">
+                          📚 Tài liệu ôn tập liên quan
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {item.tags
+                            .filter(tag => typeof tag === 'object' && tag.documentUrl)
+                            .map((tag, idx) => (
+                              <button
+                                key={idx}
+                                onClick={() => openDocument(tag.documentUrl)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-purple-300 rounded-lg text-sm text-purple-700 hover:bg-purple-100 hover:border-purple-400 transition font-medium shadow-sm"
+                              >
+                                <FileText size={14} />
+                                {tag.name}
+                                <ExternalLink size={12} className="opacity-50" />
+                              </button>
+                            ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -230,51 +264,77 @@ const IncorrectAnswersReview = ({ resultId }) => {
             </div>
           ) : (
             Object.entries(groupedByTag)
-              .sort(([, a], [, b]) => b.length - a.length)
-              .map(([tagName, questions]) => (
-                <div key={tagName} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                  {/* Tag header */}
-                  <div className="bg-gradient-to-r from-indigo-50 to-blue-50 p-4 border-b">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <BookOpen size={20} className="text-indigo-600" />
-                        <div>
-                          <p className="font-semibold text-gray-800">{tagName}</p>
-                          <p className="text-sm text-gray-600">{questions.length} câu sai</p>
+              .sort(([, a], [, b]) => {
+                // Sắp xếp theo số câu sai giảm dần
+                const aLen = a.questions ? a.questions.length : a.length;
+                const bLen = b.questions ? b.questions.length : b.length;
+                return bLen - aLen;
+              })
+              .map(([tagName, tagData]) => {
+                // Tương thích cả format cũ (array) và mới (object với questions)
+                const questions = tagData.questions || tagData;
+                const documentUrl = tagData.documentUrl || null;
+                const documentTitle = tagData.documentTitle || null;
+
+                return (
+                  <div key={tagName} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                    {/* Tag header */}
+                    <div className="bg-gradient-to-r from-indigo-50 to-blue-50 p-4 border-b">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <BookOpen size={20} className="text-indigo-600" />
+                          <div>
+                            <p className="font-semibold text-gray-800">{tagName}</p>
+                            <p className="text-sm text-gray-600">{questions.length} câu sai</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          {/* Nút xem tài liệu */}
+                          {documentUrl && (
+                            <button
+                              onClick={() => openDocument(documentUrl)}
+                              className="inline-flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg text-sm font-medium hover:from-purple-600 hover:to-indigo-700 transition shadow-sm"
+                              title={documentTitle || `Xem tài liệu ${tagName}`}
+                            >
+                              <FileText size={14} />
+                              📚 Xem tài liệu
+                              <ExternalLink size={12} className="opacity-75" />
+                            </button>
+                          )}
+                          <div className="text-2xl font-bold text-red-500">{questions.length}</div>
                         </div>
                       </div>
-                      <div className="text-2xl font-bold text-red-500">{questions.length}</div>
                     </div>
-                  </div>
 
-                  {/* Questions list */}
-                  <div className="divide-y">
-                    {questions.map((item) => (
-                      <div key={item.detailId} className="p-4 hover:bg-gray-50 transition">
-                        <div className="flex items-start gap-3">
-                          <span className="flex-shrink-0 inline-flex items-center justify-center h-6 w-6 rounded-full bg-red-100 text-red-600 text-sm font-medium">
-                            {item.displayOrder}
-                          </span>
-                          <div className="flex-1 min-w-0">
-                            <p
-                              className="text-sm font-medium text-gray-800"
-                              dangerouslySetInnerHTML={{ __html: item.questionContent }}
-                            />
-                            <div className="mt-2 space-y-1">
-                              <p className="text-xs text-gray-600">
-                                <span className="font-semibold">Bạn trả lời:</span> {stripHtml(item.studentAnswer)}
-                              </p>
-                              <p className="text-xs text-green-700">
-                                <span className="font-semibold">Đáp án đúng:</span> {stripHtml(item.correctAnswer)}
-                              </p>
+                    {/* Questions list */}
+                    <div className="divide-y">
+                      {questions.map((item) => (
+                        <div key={item.detailId} className="p-4 hover:bg-gray-50 transition">
+                          <div className="flex items-start gap-3">
+                            <span className="flex-shrink-0 inline-flex items-center justify-center h-6 w-6 rounded-full bg-red-100 text-red-600 text-sm font-medium">
+                              {item.displayOrder}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <p
+                                className="text-sm font-medium text-gray-800"
+                                dangerouslySetInnerHTML={{ __html: item.questionContent }}
+                              />
+                              <div className="mt-2 space-y-1">
+                                <p className="text-xs text-gray-600">
+                                  <span className="font-semibold">Bạn trả lời:</span> {stripHtml(item.studentAnswer)}
+                                </p>
+                                <p className="text-xs text-green-700">
+                                  <span className="font-semibold">Đáp án đúng:</span> {stripHtml(item.correctAnswer)}
+                                </p>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
           )}
         </div>
       )}
@@ -283,7 +343,7 @@ const IncorrectAnswersReview = ({ resultId }) => {
       <div className="bg-indigo-50 rounded-lg p-4 border border-indigo-200">
         <p className="text-sm text-indigo-900">
           <span className="font-semibold">💡 Gợi ý:</span> Tập trung ôn tập các chủ đề có nhiều câu sai. 
-          Xem phần "Phân loại theo Tag" để xác định điểm yếu.
+          Xem phần "Phân loại theo Tag" để xác định điểm yếu và truy cập tài liệu ôn tập tương ứng.
         </p>
       </div>
     </div>
