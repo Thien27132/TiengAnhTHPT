@@ -11,7 +11,7 @@ const QuestionList = ({
   onDelete,
   onViewDetail
 }) => {
-  const renderChildCount = (q) => (q.QuestionType === 'Ordering' ? 1 : q.ChildCount || 0);
+  const renderChildCount = (q) => q.ChildCount || 0;
 
   return (
     <div className="overflow-x-auto">
