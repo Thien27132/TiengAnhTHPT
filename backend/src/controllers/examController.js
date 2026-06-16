@@ -167,7 +167,7 @@ const submitExam = async (req, res) => {
             });
         });
 
-        const finalScore = totalQuestions > 0 ? (correctCount * 10) / totalQuestions : 0;
+        const finalScore = totalQuestions > 0 ? Math.round(((correctCount * 10) / totalQuestions) * 100) / 100 : 0;
 
         const resultInsert = await sql.query`
             INSERT INTO ExamResults (ExamID, StudentID, Score, CompletedTime)

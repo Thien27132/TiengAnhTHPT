@@ -131,7 +131,7 @@ const ExamHistory = () => {
 
                   <div className="p-4 bg-green-50 rounded-xl text-center">
                     <p className="text-xs text-green-600 font-medium">Điểm số</p>
-                    <p className="text-3xl font-bold text-green-900">{Number(result.Score).toFixed(1)}/10</p>
+                    <p className="text-3xl font-bold text-green-900">{Number(result.Score).toFixed(2)}/10</p>
                   </div>
 
                   <button

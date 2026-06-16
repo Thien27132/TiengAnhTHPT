@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom';
-import { FileText, LayoutGrid, LogOut, User } from 'lucide-react';
+import { FileText, LayoutGrid, LogOut, User, BookOpen } from 'lucide-react';
 
 const AdminLayout = () => {
   const navigate = useNavigate();
@@ -26,6 +26,10 @@ const AdminLayout = () => {
           <Link to="/admin/exams" className="flex items-center space-x-3 p-3 hover:bg-indigo-800 rounded-lg transition">
             <LayoutGrid size={20} />
             <span>Quản lý đề thi</span>
+          </Link>
+          <Link to="/admin/resources" className="flex items-center space-x-3 p-3 hover:bg-indigo-800 rounded-lg transition">
+            <BookOpen size={20} />
+            <span>Kho tài liệu</span>
           </Link>
         </nav>
         <div className="p-4 bg-indigo-950 flex items-center justify-between">

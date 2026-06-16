@@ -73,7 +73,7 @@ const StudentAnalytics = ({ studentId }) => {
       datasets: [
         {
           label: 'Điểm số /10',
-          data: progressData.scores.map((score) => Number(score || 0).toFixed(1)),
+          data: progressData.scores.map((score) => Number(score || 0).toFixed(2)),
           fill: true,
           tension: 0.35,
           backgroundColor: 'rgba(59, 130, 246, 0.15)',
@@ -85,6 +85,52 @@ const StudentAnalytics = ({ studentId }) => {
         }
       ]
     };
+  }, [progressData]);
+
+  // Phân tích xu hướng biểu đồ điểm số
+  const trendInfo = useMemo(() => {
+    const scores = progressData.scores;
+    if (!Array.isArray(scores) || scores.length < 2) return null;
+
+    const numScores = scores.map(s => Number(s || 0));
+    const n = numScores.length;
+
+    // Tính hồi quy tuyến tính đơn giản (slope)
+    const xMean = (n - 1) / 2;
+    const yMean = numScores.reduce((a, b) => a + b, 0) / n;
+    let numerator = 0;
+    let denominator = 0;
+    for (let i = 0; i < n; i++) {
+      numerator += (i - xMean) * (numScores[i] - yMean);
+      denominator += (i - xMean) * (i - xMean);
+    }
+    const slope = denominator !== 0 ? numerator / denominator : 0;
+
+    // Điểm trung bình của các lần thi gần nhất
+    const avgScore = yMean;
+
+    // Xác định xu hướng: slope > 0.1 = tăng, < -0.1 = giảm, còn lại = ngang
+    const isGoingDown = slope < -0.1;
+    const isGoingUpOrFlat = !isGoingDown; // tăng hoặc ngang
+    const isAbove5 = avgScore >= 5;
+
+    if (isGoingUpOrFlat && isAbove5) {
+      return {
+        message: '🎉 Hãy giữ vững phong độ nhé!',
+        color: 'text-green-600',
+        bgColor: 'bg-green-50',
+        borderColor: 'border-green-200',
+        icon: '💪'
+      };
+    } else {
+      return {
+        message: '📚 Bạn cần nỗ lực hơn nhé!',
+        color: 'text-amber-600',
+        bgColor: 'bg-amber-50',
+        borderColor: 'border-amber-200',
+        icon: '⚡'
+      };
+    }
   }, [progressData]);
 
   const radarChartData = useMemo(() => {
@@ -193,6 +239,15 @@ const StudentAnalytics = ({ studentId }) => {
                 </div>
               ) : (
                 <div className="py-16 text-center text-slate-500">Chưa có dữ liệu điểm số.</div>
+              )}
+              {/* Câu động viên dựa trên xu hướng */}
+              {trendInfo && lineChartData && (
+                <div className={`mt-4 ${trendInfo.bgColor} ${trendInfo.borderColor} border rounded-2xl px-4 py-3 flex items-center gap-3`}>
+                  <span className="text-2xl">{trendInfo.icon}</span>
+                  <p className={`text-sm font-semibold ${trendInfo.color}`}>
+                    {trendInfo.message}
+                  </p>
+                </div>
               )}
             </div>
 

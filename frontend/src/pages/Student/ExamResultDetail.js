@@ -207,7 +207,7 @@ const ExamResultDetail = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-2xl p-6 border border-indigo-200">
             <div className="text-xs text-indigo-600 font-semibold uppercase mb-2">Điểm thi</div>
-            <div className="text-4xl font-bold text-indigo-900">{Number(result.examResults[0]?.Score || 0).toFixed(1)}</div>
+            <div className="text-4xl font-bold text-indigo-900">{Number(result.examResults[0]?.Score || 0).toFixed(2)}</div>
             <div className="text-sm text-indigo-700 mt-2">/10 điểm</div>
           </div>
 
