@@ -9,8 +9,40 @@ const stripHtml = (html) => {
   return doc.body.textContent || '';
 };
 
-// Base URL cho backend
-const BACKEND_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+// Base URL cho backend (bỏ /api nếu có, vì documents serve ở root)
+const BACKEND_URL = (process.env.REACT_APP_API_URL || 'http://localhost:5000').replace(/\/api\/?$/, '');
+
+// Helper: Lấy thông tin gợi ý dựa trên số câu sai
+const getRecommendationLevel = (wrongCount) => {
+  if (wrongCount > 2) {
+    return {
+      label: '⚠️ Phải ôn tập ngay',
+      color: 'text-red-600',
+      bgColor: 'bg-red-50',
+      borderColor: 'border-red-300',
+      badgeBg: 'bg-red-100 text-red-700',
+      btnBg: 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700',
+    };
+  } else if (wrongCount === 2) {
+    return {
+      label: '📝 Nên ôn tập',
+      color: 'text-yellow-600',
+      bgColor: 'bg-yellow-50',
+      borderColor: 'border-yellow-300',
+      badgeBg: 'bg-yellow-100 text-yellow-700',
+      btnBg: 'bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600',
+    };
+  } else {
+    return {
+      label: '💡 Có thể ôn tập',
+      color: 'text-green-600',
+      bgColor: 'bg-green-50',
+      borderColor: 'border-green-300',
+      badgeBg: 'bg-green-100 text-green-700',
+      btnBg: 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600',
+    };
+  }
+};
 
 const IncorrectAnswersReview = ({ resultId }) => {
   const [data, setData] = useState(null);
@@ -223,30 +255,6 @@ const IncorrectAnswersReview = ({ resultId }) => {
                         />
                       </div>
                     )}
-
-                    {/* Tài liệu gợi ý cho câu này */}
-                    {item.tags.some(tag => (typeof tag === 'object' ? tag.documentUrl : null)) && (
-                      <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded p-3 border border-purple-200">
-                        <p className="text-xs font-semibold text-purple-700 uppercase mb-2">
-                          📚 Tài liệu ôn tập liên quan
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {item.tags
-                            .filter(tag => typeof tag === 'object' && tag.documentUrl)
-                            .map((tag, idx) => (
-                              <button
-                                key={idx}
-                                onClick={() => openDocument(tag.documentUrl)}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-purple-300 rounded-lg text-sm text-purple-700 hover:bg-purple-100 hover:border-purple-400 transition font-medium shadow-sm"
-                              >
-                                <FileText size={14} />
-                                {tag.name}
-                                <ExternalLink size={12} className="opacity-50" />
-                              </button>
-                            ))}
-                        </div>
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
@@ -255,7 +263,7 @@ const IncorrectAnswersReview = ({ resultId }) => {
         </div>
       )}
 
-      {/* Tab Content - Phân loại theo Tag */}
+      {/* Tab Content - Phân loại theo Tag + Gợi ý tài liệu */}
       {activeTab === 'byTag' && (
         <div className="space-y-4">
           {Object.entries(groupedByTag).length === 0 ? (
@@ -265,16 +273,17 @@ const IncorrectAnswersReview = ({ resultId }) => {
           ) : (
             Object.entries(groupedByTag)
               .sort(([, a], [, b]) => {
-                // Sắp xếp theo số câu sai giảm dần
-                const aLen = a.questions ? a.questions.length : a.length;
-                const bLen = b.questions ? b.questions.length : b.length;
+                const aLen = a.questions ? a.questions.length : (Array.isArray(a) ? a.length : 0);
+                const bLen = b.questions ? b.questions.length : (Array.isArray(b) ? b.length : 0);
                 return bLen - aLen;
               })
               .map(([tagName, tagData]) => {
                 // Tương thích cả format cũ (array) và mới (object với questions)
-                const questions = tagData.questions || tagData;
+                const questions = tagData.questions || (Array.isArray(tagData) ? tagData : []);
                 const documentUrl = tagData.documentUrl || null;
                 const documentTitle = tagData.documentTitle || null;
+                const wrongCount = questions.length;
+                const recommendation = getRecommendationLevel(wrongCount);
 
                 return (
                   <div key={tagName} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -285,24 +294,10 @@ const IncorrectAnswersReview = ({ resultId }) => {
                           <BookOpen size={20} className="text-indigo-600" />
                           <div>
                             <p className="font-semibold text-gray-800">{tagName}</p>
-                            <p className="text-sm text-gray-600">{questions.length} câu sai</p>
+                            <p className="text-sm text-gray-600">{wrongCount} câu sai</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                          {/* Nút xem tài liệu */}
-                          {documentUrl && (
-                            <button
-                              onClick={() => openDocument(documentUrl)}
-                              className="inline-flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg text-sm font-medium hover:from-purple-600 hover:to-indigo-700 transition shadow-sm"
-                              title={documentTitle || `Xem tài liệu ${tagName}`}
-                            >
-                              <FileText size={14} />
-                              📚 Xem tài liệu
-                              <ExternalLink size={12} className="opacity-75" />
-                            </button>
-                          )}
-                          <div className="text-2xl font-bold text-red-500">{questions.length}</div>
-                        </div>
+                        <div className="text-2xl font-bold text-red-500">{wrongCount}</div>
                       </div>
                     </div>
 
@@ -332,6 +327,33 @@ const IncorrectAnswersReview = ({ resultId }) => {
                         </div>
                       ))}
                     </div>
+
+                    {/* Gợi ý tài liệu ôn tập — nằm cuối mỗi nhóm tag */}
+                    {documentUrl && (
+                      <div className={`p-4 border-t ${recommendation.bgColor} ${recommendation.borderColor}`}>
+                        <div className="flex items-center justify-between flex-wrap gap-3">
+                          <div className="flex items-center gap-3">
+                            <FileText size={18} className={recommendation.color} />
+                            <div>
+                              <span className={`text-sm font-bold ${recommendation.color}`}>
+                                {recommendation.label}
+                              </span>
+                              <p className="text-xs text-gray-600 mt-0.5">
+                                {documentTitle || `Tài liệu ôn tập: ${tagName}`}
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => openDocument(documentUrl)}
+                            className={`inline-flex items-center gap-1.5 px-4 py-2 ${recommendation.btnBg} text-white rounded-lg text-sm font-medium transition shadow-sm`}
+                          >
+                            <FileText size={14} />
+                            Xem tài liệu
+                            <ExternalLink size={12} className="opacity-75" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })
