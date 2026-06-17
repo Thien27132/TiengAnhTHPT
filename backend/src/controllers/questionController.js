@@ -42,70 +42,128 @@ const buildParentContent = (prompt, passage) => {
 
 const createQuestion = async (req, res) => {
     const { prompt, passage, level, tagIds, questionType, questions } = req.body;
+
+    // === DEBUG LOG ===
+    console.log('=== createQuestion DEBUG ===');
+    console.log('questionType:', questionType);
+    console.log('tagIds:', JSON.stringify(tagIds));
+    console.log('questions count:', questions?.length);
+    if (questions && questions.length > 0) {
+        questions.forEach((item, idx) => {
+            console.log(`  Question[${idx}]:`, JSON.stringify({
+                question: (item.question || '').substring(0, 50),
+                tagIds: item.tagIds,
+                answersCount: item.answers?.length,
+                answers: item.answers?.map((a, j) => ({
+                    contentLength: a.content?.length || 0,
+                    contentPreview: (a.content || '').substring(0, 30),
+                    isCorrect: a.isCorrect,
+                    explanation: (a.explanation || '').substring(0, 20)
+                }))
+            }, null, 2));
+        });
+    }
+    console.log('=== END DEBUG ===');
+
+    // Validation trước khi mở transaction
+    const requiredCount = getRequiredQuestionCount(questionType);
+    if (!requiredCount) {
+        return res.status(400).json({ message: 'Loại câu hỏi không hợp lệ.' });
+    }
+
+    if (!prompt || !prompt.trim()) {
+        return res.status(400).json({ message: 'Vui lòng nhập đề bài.' });
+    }
+
+    if (questionType !== 'Ordering' && (!passage || !passage.trim())) {
+        return res.status(400).json({ message: 'Đoạn văn là bắt buộc cho loại đề này.' });
+    }
+
+    if (!Array.isArray(questions) || questions.length !== requiredCount) {
+        return res.status(400).json({ message: `Yêu cầu phải có đúng ${requiredCount} câu hỏi cho loại ${questionType}.` });
+    }
+
+    for (let i = 0; i < questions.length; i++) {
+        const item = questions[i];
+        if (!Array.isArray(item.answers) || item.answers.length !== 4) {
+            return res.status(400).json({ message: 'Mỗi câu hỏi phải có đủ 4 đáp án.' });
+        }
+        const correctAnswers = item.answers.filter(ans => ans.isCorrect);
+        if (correctAnswers.length !== 1) {
+            return res.status(400).json({ message: 'Mỗi câu hỏi cần đúng 1 đáp án đúng.' });
+        }
+        if (!Array.isArray(item.tagIds) || item.tagIds.length === 0) {
+            return res.status(400).json({ message: `Câu ${i + 1} chưa được gán tag. Vui lòng chọn ít nhất 1 tag cho mỗi câu hỏi.` });
+        }
+    }
+
+    const transaction = new sql.Transaction();
     try {
-        const requiredCount = getRequiredQuestionCount(questionType);
-        if (!requiredCount) {
-            return res.status(400).json({ message: 'Loại câu hỏi không hợp lệ.' });
-        }
-
-        if (!prompt || !prompt.trim()) {
-            return res.status(400).json({ message: 'Vui lòng nhập đề bài.' });
-        }
-
-        if (questionType !== 'Ordering' && (!passage || !passage.trim())) {
-            return res.status(400).json({ message: 'Đoạn văn là bắt buộc cho loại đề này.' });
-        }
-
-        if (!Array.isArray(questions) || questions.length !== requiredCount) {
-            return res.status(400).json({ message: `Yêu cầu phải có đúng ${requiredCount} câu hỏi cho loại ${questionType}.` });
-        }
-
-        for (const item of questions) {
-            if (!Array.isArray(item.answers) || item.answers.length !== 4) {
-                return res.status(400).json({ message: 'Mỗi câu hỏi phải có đủ 4 đáp án.' });
-            }
-            const correctAnswers = item.answers.filter(ans => ans.isCorrect);
-            if (correctAnswers.length !== 1) {
-                return res.status(400).json({ message: 'Mỗi câu hỏi cần đúng 1 đáp án đúng.' });
-            }
-        }
+        await transaction.begin();
 
         const parentContent = buildParentContent(prompt, passage || '');
-        const parentResult = await sql.query`
+        const parentRequest = new sql.Request(transaction);
+        parentRequest.input('content', sql.NVarChar, parentContent);
+        parentRequest.input('level', sql.NVarChar, level);
+        parentRequest.input('questionType', sql.NVarChar, questionType);
+        const parentResult = await parentRequest.query(`
             INSERT INTO Questions (Content, Level, IsPassage, ParentID, QuestionType)
             OUTPUT INSERTED.QuestionID
-            VALUES (${parentContent}, ${level}, 1, NULL, ${questionType})`;
+            VALUES (@content, @level, 1, NULL, @questionType)`);
 
         const parentQuestionId = parentResult.recordset[0].QuestionID;
 
+        // Insert parent tags
         if (tagIds && Array.isArray(tagIds) && tagIds.length > 0) {
             for (const tagId of tagIds) {
-                await sql.query`INSERT INTO Question_Tags (QuestionID, TagID) VALUES (${parentQuestionId}, ${tagId})`;
+                const tagRequest = new sql.Request(transaction);
+                tagRequest.input('questionId', sql.Int, parentQuestionId);
+                tagRequest.input('tagId', sql.Int, tagId);
+                await tagRequest.query('INSERT INTO Question_Tags (QuestionID, TagID) VALUES (@questionId, @tagId)');
             }
         }
 
+        // Insert child questions, their tags, and answers
         for (const item of questions) {
-            const childQuestionResult = await sql.query`
+            const childRequest = new sql.Request(transaction);
+            childRequest.input('childContent', sql.NVarChar, item.question || '');
+            childRequest.input('level', sql.NVarChar, level);
+            childRequest.input('parentId', sql.Int, parentQuestionId);
+            childRequest.input('questionType', sql.NVarChar, questionType);
+            const childQuestionResult = await childRequest.query(`
                 INSERT INTO Questions (Content, Level, IsPassage, ParentID, QuestionType)
                 OUTPUT INSERTED.QuestionID
-                VALUES (${item.question || ''}, ${level}, 0, ${parentQuestionId}, ${questionType})`;
+                VALUES (@childContent, @level, 0, @parentId, @questionType)`);
             const childQuestionId = childQuestionResult.recordset[0].QuestionID;
 
+            // Insert child question tags
             if (item.tagIds && Array.isArray(item.tagIds) && item.tagIds.length > 0) {
                 for (const tagId of item.tagIds) {
-                    await sql.query`INSERT INTO Question_Tags (QuestionID, TagID) VALUES (${childQuestionId}, ${tagId})`;
+                    const childTagRequest = new sql.Request(transaction);
+                    childTagRequest.input('questionId', sql.Int, childQuestionId);
+                    childTagRequest.input('tagId', sql.Int, tagId);
+                    await childTagRequest.query('INSERT INTO Question_Tags (QuestionID, TagID) VALUES (@questionId, @tagId)');
                 }
             }
 
+            // Insert 4 answers for each child question
             for (const ans of item.answers) {
-                await sql.query`
+                const ansRequest = new sql.Request(transaction);
+                ansRequest.input('questionId', sql.Int, childQuestionId);
+                ansRequest.input('answerContent', sql.NVarChar, ans.content);
+                ansRequest.input('isCorrect', sql.Bit, ans.isCorrect ? 1 : 0);
+                ansRequest.input('explanation', sql.NVarChar, ans.explanation || '');
+                await ansRequest.query(`
                     INSERT INTO Answers (QuestionID, AnswerContent, IsCorrect, Explanation)
-                    VALUES (${childQuestionId}, ${ans.content}, ${ans.isCorrect ? 1 : 0}, ${ans.explanation || ''})`;
+                    VALUES (@questionId, @answerContent, @isCorrect, @explanation)`);
             }
         }
 
+        await transaction.commit();
         res.status(201).json({ message: 'Thêm bài tập thành công!', questionId: parentQuestionId });
     } catch (err) {
+        // Rollback toàn bộ nếu có lỗi
+        try { await transaction.rollback(); } catch (rollbackErr) { console.error('Rollback error:', rollbackErr); }
         console.error('createQuestion error:', err);
         res.status(500).json({ message: 'Lỗi Server', error: err.message });
     }
@@ -272,61 +330,85 @@ const getQuestionById = async (req, res) => {
 const updateQuestion = async (req, res) => {
     const { id } = req.params;
     const { prompt, passage, level, tagIds, questionType, questions } = req.body;
+
+    // Validation trước khi mở transaction
+    const requiredCount = getRequiredQuestionCount(questionType);
+    if (!requiredCount) {
+        return res.status(400).json({ message: 'Loại câu hỏi không hợp lệ.' });
+    }
+
+    if (!prompt || !prompt.trim()) {
+        return res.status(400).json({ message: 'Vui lòng nhập đề bài.' });
+    }
+
+    if (questionType !== 'Ordering' && (!passage || !passage.trim())) {
+        return res.status(400).json({ message: 'Đoạn văn là bắt buộc cho loại đề này.' });
+    }
+
+    if (!Array.isArray(questions) || questions.length !== requiredCount) {
+        return res.status(400).json({ message: `Yêu cầu phải có đúng ${requiredCount} câu hỏi cho loại ${questionType}.` });
+    }
+
+    for (let i = 0; i < questions.length; i++) {
+        const item = questions[i];
+        if (!Array.isArray(item.answers) || item.answers.length !== 4) {
+            return res.status(400).json({ message: 'Mỗi câu hỏi phải có đủ 4 đáp án.' });
+        }
+        const correctAnswers = item.answers.filter(ans => ans.isCorrect);
+        if (correctAnswers.length !== 1) {
+            return res.status(400).json({ message: 'Mỗi câu hỏi cần đúng 1 đáp án đúng.' });
+        }
+        if (!Array.isArray(item.tagIds) || item.tagIds.length === 0) {
+            return res.status(400).json({ message: `Câu ${i + 1} chưa được gán tag. Vui lòng chọn ít nhất 1 tag cho mỗi câu hỏi.` });
+        }
+    }
+
+    // Kiểm tra tồn tại trước khi mở transaction
+    const existingResult = await sql.query`
+        SELECT * FROM Questions WHERE QuestionID = ${id}`;
+    if (existingResult.recordset.length === 0) {
+        return res.status(404).json({ message: 'Không tìm thấy câu hỏi để cập nhật.' });
+    }
+
+    const existingQuestion = existingResult.recordset[0];
+    const parentId = existingQuestion.ParentID || existingQuestion.QuestionID;
+
+    const transaction = new sql.Transaction();
     try {
-        const requiredCount = getRequiredQuestionCount(questionType);
-        if (!requiredCount) {
-            return res.status(400).json({ message: 'Loại câu hỏi không hợp lệ.' });
-        }
+        await transaction.begin();
 
-        if (!prompt || !prompt.trim()) {
-            return res.status(400).json({ message: 'Vui lòng nhập đề bài.' });
-        }
-
-        if (questionType !== 'Ordering' && (!passage || !passage.trim())) {
-            return res.status(400).json({ message: 'Đoạn văn là bắt buộc cho loại đề này.' });
-        }
-
-        if (!Array.isArray(questions) || questions.length !== requiredCount) {
-            return res.status(400).json({ message: `Yêu cầu phải có đúng ${requiredCount} câu hỏi cho loại ${questionType}.` });
-        }
-
-        for (const item of questions) {
-            if (!Array.isArray(item.answers) || item.answers.length !== 4) {
-                return res.status(400).json({ message: 'Mỗi câu hỏi phải có đủ 4 đáp án.' });
-            }
-            const correctAnswers = item.answers.filter(ans => ans.isCorrect);
-            if (correctAnswers.length !== 1) {
-                return res.status(400).json({ message: 'Mỗi câu hỏi cần đúng 1 đáp án đúng.' });
-            }
-        }
-
-        const existingResult = await sql.query`
-            SELECT * FROM Questions WHERE QuestionID = ${id}`;
-        if (existingResult.recordset.length === 0) {
-            return res.status(404).json({ message: 'Không tìm thấy câu hỏi để cập nhật.' });
-        }
-
-        const existingQuestion = existingResult.recordset[0];
-        const parentId = existingQuestion.ParentID || existingQuestion.QuestionID;
-
+        // Update parent question
         const content = buildParentContent(prompt, passage || '');
-        await sql.query`
+        const updateParentReq = new sql.Request(transaction);
+        updateParentReq.input('content', sql.NVarChar, content);
+        updateParentReq.input('level', sql.NVarChar, level);
+        updateParentReq.input('questionType', sql.NVarChar, questionType);
+        updateParentReq.input('parentId', sql.Int, parentId);
+        await updateParentReq.query(`
             UPDATE Questions
-            SET Content = ${content}, Level = ${level}, IsPassage = 1, ParentID = NULL, QuestionType = ${questionType}
-            WHERE QuestionID = ${parentId}`;
+            SET Content = @content, Level = @level, IsPassage = 1, ParentID = NULL, QuestionType = @questionType
+            WHERE QuestionID = @parentId`);
 
-        await sql.query`DELETE FROM Question_Tags WHERE QuestionID = ${parentId}`;
+        // Update parent tags: xóa rồi insert lại
+        const deleteParentTagsReq = new sql.Request(transaction);
+        deleteParentTagsReq.input('parentId', sql.Int, parentId);
+        await deleteParentTagsReq.query('DELETE FROM Question_Tags WHERE QuestionID = @parentId');
         if (tagIds && Array.isArray(tagIds) && tagIds.length > 0) {
             for (const tagId of tagIds) {
-                await sql.query`INSERT INTO Question_Tags (QuestionID, TagID) VALUES (${parentId}, ${tagId})`;
+                const tagReq = new sql.Request(transaction);
+                tagReq.input('questionId', sql.Int, parentId);
+                tagReq.input('tagId', sql.Int, tagId);
+                await tagReq.query('INSERT INTO Question_Tags (QuestionID, TagID) VALUES (@questionId, @tagId)');
             }
         }
 
         // Lấy danh sách câu con hiện tại (giữ nguyên QuestionID)
-        const existingChildrenResult = await sql.query`
+        const existingChildrenReq = new sql.Request(transaction);
+        existingChildrenReq.input('parentId', sql.Int, parentId);
+        const existingChildrenResult = await existingChildrenReq.query(`
             SELECT QuestionID FROM Questions
-            WHERE ParentID = ${parentId}
-            ORDER BY QuestionID ASC`;
+            WHERE ParentID = @parentId
+            ORDER BY QuestionID ASC`);
         const existingChildIds = existingChildrenResult.recordset.map(c => c.QuestionID);
 
         for (let i = 0; i < questions.length; i++) {
@@ -334,37 +416,57 @@ const updateQuestion = async (req, res) => {
             const childQuestionId = existingChildIds[i];
 
             // UPDATE câu con → giữ nguyên QuestionID
-            await sql.query`
+            const updateChildReq = new sql.Request(transaction);
+            updateChildReq.input('childContent', sql.NVarChar, item.question || '');
+            updateChildReq.input('level', sql.NVarChar, level);
+            updateChildReq.input('questionType', sql.NVarChar, questionType);
+            updateChildReq.input('childId', sql.Int, childQuestionId);
+            await updateChildReq.query(`
                 UPDATE Questions
-                SET Content = ${item.question || ''}, Level = ${level}, QuestionType = ${questionType}
-                WHERE QuestionID = ${childQuestionId}`;
+                SET Content = @childContent, Level = @level, QuestionType = @questionType
+                WHERE QuestionID = @childId`);
 
-            // Question_Tags: xóa rồi insert lại (không có bảng nào trỏ đến Question_Tags)
-            await sql.query`DELETE FROM Question_Tags WHERE QuestionID = ${childQuestionId}`;
+            // Question_Tags: xóa rồi insert lại
+            const deleteChildTagsReq = new sql.Request(transaction);
+            deleteChildTagsReq.input('childId', sql.Int, childQuestionId);
+            await deleteChildTagsReq.query('DELETE FROM Question_Tags WHERE QuestionID = @childId');
             if (item.tagIds && Array.isArray(item.tagIds) && item.tagIds.length > 0) {
                 for (const tagId of item.tagIds) {
-                    await sql.query`INSERT INTO Question_Tags (QuestionID, TagID) VALUES (${childQuestionId}, ${tagId})`;
+                    const childTagReq = new sql.Request(transaction);
+                    childTagReq.input('questionId', sql.Int, childQuestionId);
+                    childTagReq.input('tagId', sql.Int, tagId);
+                    await childTagReq.query('INSERT INTO Question_Tags (QuestionID, TagID) VALUES (@questionId, @tagId)');
                 }
             }
 
             // UPDATE 4 đáp án → giữ nguyên AnswerID
-            const existingAnswersResult = await sql.query`
+            const existingAnswersReq = new sql.Request(transaction);
+            existingAnswersReq.input('childId', sql.Int, childQuestionId);
+            const existingAnswersResult = await existingAnswersReq.query(`
                 SELECT AnswerID FROM Answers
-                WHERE QuestionID = ${childQuestionId}
-                ORDER BY AnswerID ASC`;
+                WHERE QuestionID = @childId
+                ORDER BY AnswerID ASC`);
             const existingAnswerIds = existingAnswersResult.recordset.map(a => a.AnswerID);
 
             for (let j = 0; j < item.answers.length; j++) {
                 const ans = item.answers[j];
-                await sql.query`
+                const updateAnsReq = new sql.Request(transaction);
+                updateAnsReq.input('ansContent', sql.NVarChar, ans.content);
+                updateAnsReq.input('isCorrect', sql.Bit, ans.isCorrect ? 1 : 0);
+                updateAnsReq.input('explanation', sql.NVarChar, ans.explanation || '');
+                updateAnsReq.input('answerId', sql.Int, existingAnswerIds[j]);
+                await updateAnsReq.query(`
                     UPDATE Answers
-                    SET AnswerContent = ${ans.content}, IsCorrect = ${ans.isCorrect ? 1 : 0}, Explanation = ${ans.explanation || ''}
-                    WHERE AnswerID = ${existingAnswerIds[j]}`;
+                    SET AnswerContent = @ansContent, IsCorrect = @isCorrect, Explanation = @explanation
+                    WHERE AnswerID = @answerId`);
             }
         }
 
+        await transaction.commit();
         res.json({ message: 'Cập nhật bài tập thành công' });
     } catch (err) {
+        // Rollback toàn bộ nếu có lỗi
+        try { await transaction.rollback(); } catch (rollbackErr) { console.error('Rollback error:', rollbackErr); }
         console.error('updateQuestion error:', err);
         res.status(500).json({ message: 'Lỗi cập nhật câu hỏi', error: err.message });
     }
@@ -383,12 +485,16 @@ const deleteQuestion = async (req, res) => {
         const parentId = question.ParentID || question.QuestionID;
 
         if (question.ParentID === null) {
-            // Xóa câu con trước (ParentID FK là NO ACTION nên không tự CASCADE)
-            // Khi xóa Questions → Answers, Question_Tags, Exam_Questions, ResultDetail tự CASCADE
+            // Xóa Question_Tags của các câu con
+            await sql.query`DELETE FROM Question_Tags WHERE QuestionID IN (SELECT QuestionID FROM Questions WHERE ParentID = ${parentId})`;
+            // Xóa Question_Tags của câu cha
+            await sql.query`DELETE FROM Question_Tags WHERE QuestionID = ${parentId}`;
+            // Xóa câu con rồi câu cha
             await sql.query`DELETE FROM Questions WHERE ParentID = ${parentId}`;
             await sql.query`DELETE FROM Questions WHERE QuestionID = ${parentId}`;
         } else {
-            // Xóa câu con đơn lẻ → Answers, Question_Tags, Exam_Questions, ResultDetail tự CASCADE
+            // Xóa Question_Tags của câu con đơn lẻ
+            await sql.query`DELETE FROM Question_Tags WHERE QuestionID = ${id}`;
             await sql.query`DELETE FROM Questions WHERE QuestionID = ${id}`;
         }
 

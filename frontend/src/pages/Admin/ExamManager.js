@@ -97,15 +97,13 @@ const ExamManager = () => {
   useEffect(() => {
     if (location.state?.openQuestionSelector) {
       setIsQuestionSelectorOpen(true);
-      if (Array.isArray(location.state.selectedQuestionIds)) {
-        setFormData((prev) => ({
-          ...prev,
-          selectedQuestionIds: location.state.selectedQuestionIds
-        }));
-      }
-      if (location.state.selectedQuestionLevel) {
-        setSelectedQuestionLevel(location.state.selectedQuestionLevel);
-      }
+      const restoredIds = Array.isArray(location.state.selectedQuestionIds) ? location.state.selectedQuestionIds : [];
+      const restoredLevel = location.state.selectedQuestionLevel || 'Trung bình';
+      setFormData((prev) => ({
+        ...prev,
+        selectedQuestionIds: restoredIds,
+        level: restoredLevel
+      }));
     }
   }, [location.state]);
 
@@ -482,7 +480,7 @@ const ExamManager = () => {
             </div>
 
             {/* Bộ lọc */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <div>
                 <input
                   value={questionSearch}
@@ -505,18 +503,6 @@ const ExamManager = () => {
                   <option value="Reading_10">Reading 10</option>
                 </select>
               </div>
-              <div>
-                <select
-                  value={selectedQuestionLevel}
-                  onChange={(e) => setSelectedQuestionLevel(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 outline-none"
-                >
-                  <option value="">Tất cả mức độ</option>
-                  <option value="Dễ">Dễ</option>
-                  <option value="Trung bình">Trung bình</option>
-                  <option value="Khó">Khó</option>
-                </select>
-              </div>
             </div>
 
             {/* Layout 2 cột */}
@@ -528,8 +514,7 @@ const ExamManager = () => {
                   {manualQuestions
                     .filter(q =>
                       (!questionSearch || q.Prompt?.toLowerCase().includes(questionSearch.toLowerCase()) || q.Passage?.toLowerCase().includes(questionSearch.toLowerCase())) &&
-                      (!selectedQuestionType || q.QuestionType === selectedQuestionType) &&
-                      (!selectedQuestionLevel || q.Level === selectedQuestionLevel)
+                      (!selectedQuestionType || q.QuestionType === selectedQuestionType)
                     )
                     .map((question) => (
                       <div key={question.QuestionID} className="border border-gray-200 rounded-lg p-4 bg-white">

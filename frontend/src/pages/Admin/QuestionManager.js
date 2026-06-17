@@ -178,6 +178,10 @@ const QuestionManager = () => {
         alert(`Vui lòng nhập đầy đủ nội dung 4 đáp án cho câu ${i + 1}.`);
         return;
       }
+      if (!Array.isArray(questionItem.tagIds) || questionItem.tagIds.length === 0) {
+        alert(`Câu ${i + 1} chưa được gán tag. Vui lòng chọn ít nhất 1 tag cho mỗi câu hỏi.`);
+        return;
+      }
     }
 
     setIsLoading(true);

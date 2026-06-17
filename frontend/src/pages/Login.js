@@ -1,98 +1,176 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import axiosClient from '../api/axiosClient'; // Sử dụng cấu hình API chung
-
+import { useNavigate, Link } from 'react-router-dom';
+import axiosClient from '../api/axiosClient';
 
 const Login = () => {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
-    const navigate = useNavigate();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const navigate = useNavigate();
 
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
 
-    const handleLogin = async (e) => {
-        e.preventDefault();
-        setError(''); // Xóa thông báo lỗi cũ trước khi thử lại
-        console.log("🚀 Đang thử đăng nhập với:", email);
+    try {
+      const data = await axiosClient.post('/auth/login', { email, password });
 
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+        const userToSave = {
+          UserID: data.user.UserID,
+          FullName: data.user.FullName,
+          Email: data.user.Email,
+          role: data.user.role
+        };
+        localStorage.setItem('user', JSON.stringify(userToSave));
 
-        try {
-            // Gọi API qua axiosClient
-            // Chú ý: data nhận về đã được interceptor "gọt vỏ" (không cần res.data)
-            const data = await axiosClient.post('/auth/login', { email, password });
-           
-            console.log("Dữ liệu nhận về từ Server:", data);  // <--- THÊM DÒNG NÀY để xem thực sự Backend đang trả về cái gì
-
-
-            if (data.token) {
-                // 1. Lưu Token xác thực
-                localStorage.setItem('token', data.token);
-               
-                // 2. Lưu thông tin User để Dashboard hiển thị
-                // Lấy thông tin user từ object mà Backend trả về
-                const userToSave = {
-                    UserID: data.user.UserID,
-                    FullName: data.user.FullName,
-                    Email: data.user.Email,
-                    role: data.user.role
-                };
-               
-                localStorage.setItem('user', JSON.stringify(userToSave));
-
-
-                console.log("✅ Đăng nhập thành công! Đang chuyển hướng...");
-                console.log("✅ Đăng nhập thành công với role:", data.user.role);
-
-                // ĐIỀU HƯỚNG DỰA TRÊN ROLE
-                if (data.user.role === 'Admin') {
-                    navigate('/admin'); // Nếu là Admin thì vào khu quản trị
-                } else {
-                    navigate('/dashboard'); // Nếu là Học sinh thì vào trang luyện thi
-                }
-            }
-        } catch (err) {
-            console.error("❌ Lỗi đăng nhập:", err);
-            // Hiển thị lỗi từ Backend hoặc lỗi mặc định
-            setError(err.response?.data?.message || "Email hoặc mật khẩu không đúng!");
+        if (data.user.role === 'Admin') {
+          navigate('/admin');
+        } else {
+          navigate('/dashboard');
         }
-    };
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Email hoặc mật khẩu không đúng!');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  return (
+    <div className="min-h-screen flex">
+      {/* Left side - Illustration */}
+      <div className="hidden lg:flex lg:w-1/2 bg-indigo-600 relative items-center justify-center p-12">
+        <div className="max-w-md text-center">
+          <div className="text-8xl mb-8">📚</div>
+          <h2 className="text-3xl font-bold text-white mb-4">Luyện thi Tiếng Anh THPT Quốc Gia</h2>
+          <p className="text-indigo-200 text-lg leading-relaxed">
+            Hệ thống luyện thi Tiếng Anh trực tuyến giúp bạn ôn tập hiệu quả và đạt điểm cao.
+          </p>
+          <div className="mt-10 flex items-center justify-center gap-8 text-indigo-200">
+            <div className="text-center">
+              <div className="text-3xl mb-1">🎓</div>
+              <div className="text-sm">Đề thi chuẩn</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl mb-1">📊</div>
+              <div className="text-sm">Thống kê chi tiết</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl mb-1">📖</div>
+              <div className="text-sm">Tài liệu phong phú</div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-    return (
-        <div style={styles.container}>
-            <form onSubmit={handleLogin} style={styles.form}>
-                <h2>Đăng Nhập</h2>
-                {error && <p style={{ color: 'red', fontWeight: 'bold' }}>{error}</p>}
+      {/* Right side - Login form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-gray-50">
+        <div className="w-full max-w-md">
+          {/* Logo */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center gap-3 mb-2">
+              <span className="text-4xl">📚</span>
+              <h1 className="text-2xl font-bold text-gray-800">Tiếng Anh THPT</h1>
+            </div>
+            <p className="text-gray-500 text-sm">Đăng nhập để bắt đầu luyện thi</p>
+          </div>
+
+          {/* Form card */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+            <h2 className="text-xl font-bold text-gray-800 mb-1">Đăng nhập</h2>
+            <p className="text-gray-400 text-sm mb-6">Nhập email và mật khẩu của bạn</p>
+
+            {error && (
+              <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200">
+                <p className="text-red-600 text-sm flex items-center gap-2">
+                  <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                  {error}
+                </p>
+              </div>
+            )}
+
+            <form onSubmit={handleLogin} className="space-y-5">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
                 <input
-                    type="email"
-                    placeholder="Email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    style={styles.input}
-                    required
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
                 />
-                <input
-                    type="password"
-                    placeholder="Mật khẩu"
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Mật khẩu</label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    style={styles.input}
                     required
-                />
-                <button type="submit" style={styles.button}>Vào hệ thống</button>
-                <p>Chưa có tài khoản? <a href="/register">Đăng ký ngay</a></p>
+                    className="w-full px-4 py-3 rounded-lg border border-gray-300 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition pr-12"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? (
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                      </svg>
+                    ) : (
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-3 rounded-lg bg-indigo-600 text-white font-semibold hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Đang đăng nhập...
+                  </span>
+                ) : 'Vào hệ thống'}
+              </button>
             </form>
+
+            <div className="mt-6 text-center">
+              <p className="text-gray-500 text-sm">
+                Chưa có tài khoản?{' '}
+                <Link to="/register" className="text-indigo-600 font-semibold hover:text-indigo-700">
+                  Đăng ký ngay
+                </Link>
+              </p>
+            </div>
+          </div>
+
+          <p className="mt-6 text-center text-gray-400 text-xs">© 2026 Tiếng Anh THPT</p>
         </div>
-    );
+      </div>
+    </div>
+  );
 };
-
-
-const styles = {
-    container: { display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#e9ecef' },
-    form: { padding: '2rem', backgroundColor: '#fff', borderRadius: '10px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', width: '320px', textAlign: 'center' },
-    input: { width: '100%', padding: '12px', margin: '10px 0', borderRadius: '5px', border: '1px solid #ccc', boxSizing: 'border-box' },
-    button: { width: '100%', padding: '12px', backgroundColor: '#28a745', color: '#fff', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }
-};
-
 
 export default Login;
