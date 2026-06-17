@@ -56,11 +56,8 @@ const createQuestion = async (req, res) => {
             return res.status(400).json({ message: 'Đoạn văn là bắt buộc cho loại đề này.' });
         }
 
-        const minCount = questionType === 'Ordering' ? 1 : requiredCount;
-        if (!Array.isArray(questions) || questions.length < minCount || (questionType !== 'Ordering' && questions.length !== requiredCount)) {
-            return res.status(400).json({ message: questionType === 'Ordering'
-                ? 'Ordering cần ít nhất 1 câu hỏi.'
-                : `Yêu cầu phải có đúng ${requiredCount} câu hỏi cho loại ${questionType}.` });
+        if (!Array.isArray(questions) || questions.length !== requiredCount) {
+            return res.status(400).json({ message: `Yêu cầu phải có đúng ${requiredCount} câu hỏi cho loại ${questionType}.` });
         }
 
         for (const item of questions) {
@@ -289,11 +286,8 @@ const updateQuestion = async (req, res) => {
             return res.status(400).json({ message: 'Đoạn văn là bắt buộc cho loại đề này.' });
         }
 
-        const minCount = questionType === 'Ordering' ? 1 : requiredCount;
-        if (!Array.isArray(questions) || questions.length < minCount || (questionType !== 'Ordering' && questions.length !== requiredCount)) {
-            return res.status(400).json({ message: questionType === 'Ordering'
-                ? 'Ordering cần ít nhất 1 câu hỏi.'
-                : `Yêu cầu phải có đúng ${requiredCount} câu hỏi cho loại ${questionType}.` });
+        if (!Array.isArray(questions) || questions.length !== requiredCount) {
+            return res.status(400).json({ message: `Yêu cầu phải có đúng ${requiredCount} câu hỏi cho loại ${questionType}.` });
         }
 
         for (const item of questions) {
@@ -337,23 +331,13 @@ const updateQuestion = async (req, res) => {
 
         for (let i = 0; i < questions.length; i++) {
             const item = questions[i];
-            let childQuestionId;
+            const childQuestionId = existingChildIds[i];
 
-            if (i < existingChildIds.length) {
-                // UPDATE câu con hiện có → giữ nguyên QuestionID
-                childQuestionId = existingChildIds[i];
-                await sql.query`
-                    UPDATE Questions
-                    SET Content = ${item.question || ''}, Level = ${level}, QuestionType = ${questionType}
-                    WHERE QuestionID = ${childQuestionId}`;
-            } else {
-                // INSERT câu con mới (khi số câu tăng lên, ví dụ Ordering 3→5)
-                const childResult = await sql.query`
-                    INSERT INTO Questions (Content, Level, IsPassage, ParentID, QuestionType)
-                    OUTPUT INSERTED.QuestionID
-                    VALUES (${item.question || ''}, ${level}, 0, ${parentId}, ${questionType})`;
-                childQuestionId = childResult.recordset[0].QuestionID;
-            }
+            // UPDATE câu con → giữ nguyên QuestionID
+            await sql.query`
+                UPDATE Questions
+                SET Content = ${item.question || ''}, Level = ${level}, QuestionType = ${questionType}
+                WHERE QuestionID = ${childQuestionId}`;
 
             // Question_Tags: xóa rồi insert lại (không có bảng nào trỏ đến Question_Tags)
             await sql.query`DELETE FROM Question_Tags WHERE QuestionID = ${childQuestionId}`;
@@ -363,7 +347,7 @@ const updateQuestion = async (req, res) => {
                 }
             }
 
-            // UPDATE đáp án hiện có → giữ nguyên AnswerID
+            // UPDATE 4 đáp án → giữ nguyên AnswerID
             const existingAnswersResult = await sql.query`
                 SELECT AnswerID FROM Answers
                 WHERE QuestionID = ${childQuestionId}
@@ -372,35 +356,10 @@ const updateQuestion = async (req, res) => {
 
             for (let j = 0; j < item.answers.length; j++) {
                 const ans = item.answers[j];
-                if (j < existingAnswerIds.length) {
-                    // UPDATE đáp án hiện có → giữ nguyên AnswerID
-                    await sql.query`
-                        UPDATE Answers
-                        SET AnswerContent = ${ans.content}, IsCorrect = ${ans.isCorrect ? 1 : 0}, Explanation = ${ans.explanation || ''}
-                        WHERE AnswerID = ${existingAnswerIds[j]}`;
-                } else {
-                    // INSERT đáp án mới (hiếm khi xảy ra vì luôn có 4 đáp án)
-                    await sql.query`
-                        INSERT INTO Answers (QuestionID, AnswerContent, IsCorrect, Explanation)
-                        VALUES (${childQuestionId}, ${ans.content}, ${ans.isCorrect ? 1 : 0}, ${ans.explanation || ''})`;
-                }
-            }
-
-            // Xóa đáp án thừa nếu số đáp án mới < số đáp án cũ
-            if (existingAnswerIds.length > item.answers.length) {
-                const extraAnswerIds = existingAnswerIds.slice(item.answers.length);
-                for (const extraId of extraAnswerIds) {
-                    await sql.query`DELETE FROM Answers WHERE AnswerID = ${extraId}`;
-                }
-            }
-        }
-
-        // Xóa câu con thừa nếu số câu mới < số câu cũ (ví dụ Ordering 5→3)
-        if (existingChildIds.length > questions.length) {
-            const extraChildIds = existingChildIds.slice(questions.length);
-            for (const extraId of extraChildIds) {
-                // CASCADE tự xóa Answers, Question_Tags, Exam_Questions, ResultDetail
-                await sql.query`DELETE FROM Questions WHERE QuestionID = ${extraId}`;
+                await sql.query`
+                    UPDATE Answers
+                    SET AnswerContent = ${ans.content}, IsCorrect = ${ans.isCorrect ? 1 : 0}, Explanation = ${ans.explanation || ''}
+                    WHERE AnswerID = ${existingAnswerIds[j]}`;
             }
         }
 

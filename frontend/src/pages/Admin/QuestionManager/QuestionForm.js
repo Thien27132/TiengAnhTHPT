@@ -403,18 +403,6 @@ const QuestionForm = ({
                     <h4 className="text-lg font-semibold text-gray-800">Các câu hỏi thành phần</h4>
                     <p className="text-sm text-gray-500">Tạo đáp án và gán tag cho từng câu hỏi.</p>
                   </div>
-                  <div className="flex items-center gap-3 text-sm text-gray-500">
-                    <div>Số lượng: {getVisibleQuestionCount()}</div>
-                    {form.questionType === 'Ordering' && (
-                      <button
-                        type="button"
-                        onClick={addQuestion}
-                        className="rounded-3xl bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700 transition"
-                      >
-                        Thêm câu hỏi
-                      </button>
-                    )}
-                  </div>
                 </div>
                 <div className="space-y-5">
                   {form.questions.map((questionItem, questionIndex) => {
@@ -506,17 +494,7 @@ const QuestionForm = ({
                             <div className="flex items-center justify-between mb-3 gap-2">
                               <div>
                                 <label className="block text-sm font-medium text-gray-700">Tag</label>
-                                <p className="text-xs text-gray-500">Gán tag cho câu hỏi này</p>
                               </div>
-                              {form.questionType === 'Ordering' && form.questions.length > 1 && (
-                                <button
-                                  type="button"
-                                  onClick={() => removeQuestion(questionIndex)}
-                                  className="text-sm text-red-600 hover:underline"
-                                >
-                                  Xóa
-                                </button>
-                              )}
                             </div>
                             {selectedTags.length > 0 && (
                               <div className="mb-3 flex flex-wrap gap-2">
