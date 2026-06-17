@@ -29,7 +29,7 @@ const resourceMapping = [
     { tagId: 8, tagName: 'Thì quá khứ tiếp diễn', file: 'THI-QUA-KHU-TIEP-DIEN.pdf' },
     { tagId: 9, tagName: 'Thì quá khứ hoàn thành', file: 'THI-QUA-KHU-HOAN-THANH.pdf' },
     { tagId: 10, tagName: 'Thì tương lai tiếp diễn', file: 'THI-TUONG-LAI-TIEP-DIEN.pdf' },
-    { tagId: 11, tagName: 'Thì tương lai hoàn thành', file: 'THI-TUONG-LAI-GAN.pdf' }, // Dùng file TUONG-LAI-GAN thay thế vì không có file TUONG-LAI-HOAN-THANH
+    { tagId: 11, tagName: 'Thì tương lai gần', file: 'THI-TUONG-LAI-GAN.pdf' },
     { tagId: 12, tagName: 'Thì tương lai hoàn thành tiếp diễn', file: 'THI-TUONG-LAI-HOAN-THANH-TIEP-DIEN.pdf' },
     { tagId: 13, tagName: 'Câu so sánh', file: 'CAU-SO-SANH.pdf' },
     { tagId: 14, tagName: 'Câu điều kiện', file: 'CAU-DIEU-KIEN.pdf' },
@@ -73,7 +73,7 @@ async function seedResources() {
         // Kiểm tra xem bảng Resources đã có dữ liệu chưa
         const existingCount = await sql.query`SELECT COUNT(*) AS cnt FROM Resources`;
         const count = existingCount.recordset[0].cnt;
-        
+
         if (count > 0) {
             console.log(`⚠️  Bảng Resources đã có ${count} records.`);
             console.log('🗑️  Đang xóa dữ liệu cũ...');
@@ -116,7 +116,7 @@ async function seedResources() {
             FROM Resources r 
             JOIN Tags t ON r.TagID = t.TagID 
             ORDER BY r.TagID`;
-        
+
         console.log(`\n📋 Tổng số records trong bảng Resources: ${verifyResult.recordset.length}`);
         verifyResult.recordset.forEach(row => {
             console.log(`  [${row.ResourceID}] ${row.TagName} → ${row.ContentURL}`);

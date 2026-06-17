@@ -459,9 +459,8 @@ const getExamResultDetail = async (req, res) => {
 const deleteExam = async (req, res) => {
     const { id } = req.params;
     try {
-        await sql.query`DELETE FROM ResultDetail WHERE ResultID IN (SELECT ResultID FROM ExamResults WHERE ExamID = ${id})`;
-        await sql.query`DELETE FROM ExamResults WHERE ExamID = ${id}`;
-        await sql.query`DELETE FROM Exam_Questions WHERE ExamID = ${id}`;
+        // Chỉ cần xóa Exams → Exam_Questions, ExamResults tự CASCADE
+        // ExamResults xóa → ResultDetail tự CASCADE
         await sql.query`DELETE FROM Exams WHERE ExamID = ${id}`;
         res.json({ message: 'Xóa đề thi thành công' });
     } catch (err) {

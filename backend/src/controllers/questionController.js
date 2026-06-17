@@ -328,32 +328,79 @@ const updateQuestion = async (req, res) => {
             }
         }
 
-        const childQuestionIdsResult = await sql.query`
-            SELECT QuestionID FROM Questions WHERE ParentID = ${parentId}`;
-        const childQuestionIds = childQuestionIdsResult.recordset.map((item) => item.QuestionID);
+        // Lấy danh sách câu con hiện tại (giữ nguyên QuestionID)
+        const existingChildrenResult = await sql.query`
+            SELECT QuestionID FROM Questions
+            WHERE ParentID = ${parentId}
+            ORDER BY QuestionID ASC`;
+        const existingChildIds = existingChildrenResult.recordset.map(c => c.QuestionID);
 
-        if (childQuestionIds.length > 0) {
-            await sql.query`DELETE FROM Answers WHERE QuestionID IN (${childQuestionIds})`;
-            await sql.query`DELETE FROM Questions WHERE ParentID = ${parentId}`;
-        }
+        for (let i = 0; i < questions.length; i++) {
+            const item = questions[i];
+            let childQuestionId;
 
-        for (const item of questions) {
-            const childQuestionResult = await sql.query`
-                INSERT INTO Questions (Content, Level, IsPassage, ParentID, QuestionType)
-                OUTPUT INSERTED.QuestionID
-                VALUES (${item.question || ''}, ${level}, 0, ${parentId}, ${questionType})`;
-            const childQuestionId = childQuestionResult.recordset[0].QuestionID;
+            if (i < existingChildIds.length) {
+                // UPDATE câu con hiện có → giữ nguyên QuestionID
+                childQuestionId = existingChildIds[i];
+                await sql.query`
+                    UPDATE Questions
+                    SET Content = ${item.question || ''}, Level = ${level}, QuestionType = ${questionType}
+                    WHERE QuestionID = ${childQuestionId}`;
+            } else {
+                // INSERT câu con mới (khi số câu tăng lên, ví dụ Ordering 3→5)
+                const childResult = await sql.query`
+                    INSERT INTO Questions (Content, Level, IsPassage, ParentID, QuestionType)
+                    OUTPUT INSERTED.QuestionID
+                    VALUES (${item.question || ''}, ${level}, 0, ${parentId}, ${questionType})`;
+                childQuestionId = childResult.recordset[0].QuestionID;
+            }
 
+            // Question_Tags: xóa rồi insert lại (không có bảng nào trỏ đến Question_Tags)
+            await sql.query`DELETE FROM Question_Tags WHERE QuestionID = ${childQuestionId}`;
             if (item.tagIds && Array.isArray(item.tagIds) && item.tagIds.length > 0) {
                 for (const tagId of item.tagIds) {
                     await sql.query`INSERT INTO Question_Tags (QuestionID, TagID) VALUES (${childQuestionId}, ${tagId})`;
                 }
             }
 
-            for (const ans of item.answers) {
-                await sql.query`
-                    INSERT INTO Answers (QuestionID, AnswerContent, IsCorrect, Explanation)
-                    VALUES (${childQuestionId}, ${ans.content}, ${ans.isCorrect ? 1 : 0}, ${ans.explanation || ''})`;
+            // UPDATE đáp án hiện có → giữ nguyên AnswerID
+            const existingAnswersResult = await sql.query`
+                SELECT AnswerID FROM Answers
+                WHERE QuestionID = ${childQuestionId}
+                ORDER BY AnswerID ASC`;
+            const existingAnswerIds = existingAnswersResult.recordset.map(a => a.AnswerID);
+
+            for (let j = 0; j < item.answers.length; j++) {
+                const ans = item.answers[j];
+                if (j < existingAnswerIds.length) {
+                    // UPDATE đáp án hiện có → giữ nguyên AnswerID
+                    await sql.query`
+                        UPDATE Answers
+                        SET AnswerContent = ${ans.content}, IsCorrect = ${ans.isCorrect ? 1 : 0}, Explanation = ${ans.explanation || ''}
+                        WHERE AnswerID = ${existingAnswerIds[j]}`;
+                } else {
+                    // INSERT đáp án mới (hiếm khi xảy ra vì luôn có 4 đáp án)
+                    await sql.query`
+                        INSERT INTO Answers (QuestionID, AnswerContent, IsCorrect, Explanation)
+                        VALUES (${childQuestionId}, ${ans.content}, ${ans.isCorrect ? 1 : 0}, ${ans.explanation || ''})`;
+                }
+            }
+
+            // Xóa đáp án thừa nếu số đáp án mới < số đáp án cũ
+            if (existingAnswerIds.length > item.answers.length) {
+                const extraAnswerIds = existingAnswerIds.slice(item.answers.length);
+                for (const extraId of extraAnswerIds) {
+                    await sql.query`DELETE FROM Answers WHERE AnswerID = ${extraId}`;
+                }
+            }
+        }
+
+        // Xóa câu con thừa nếu số câu mới < số câu cũ (ví dụ Ordering 5→3)
+        if (existingChildIds.length > questions.length) {
+            const extraChildIds = existingChildIds.slice(questions.length);
+            for (const extraId of extraChildIds) {
+                // CASCADE tự xóa Answers, Question_Tags, Exam_Questions, ResultDetail
+                await sql.query`DELETE FROM Questions WHERE QuestionID = ${extraId}`;
             }
         }
 
@@ -377,13 +424,12 @@ const deleteQuestion = async (req, res) => {
         const parentId = question.ParentID || question.QuestionID;
 
         if (question.ParentID === null) {
-            await sql.query`DELETE FROM Answers WHERE QuestionID IN (SELECT QuestionID FROM Questions WHERE ParentID = ${parentId})`;
+            // Xóa câu con trước (ParentID FK là NO ACTION nên không tự CASCADE)
+            // Khi xóa Questions → Answers, Question_Tags, Exam_Questions, ResultDetail tự CASCADE
             await sql.query`DELETE FROM Questions WHERE ParentID = ${parentId}`;
-            await sql.query`DELETE FROM Question_Tags WHERE QuestionID = ${parentId}`;
             await sql.query`DELETE FROM Questions WHERE QuestionID = ${parentId}`;
         } else {
-            await sql.query`DELETE FROM Answers WHERE QuestionID = ${id}`;
-            await sql.query`DELETE FROM Question_Tags WHERE QuestionID = ${id}`;
+            // Xóa câu con đơn lẻ → Answers, Question_Tags, Exam_Questions, ResultDetail tự CASCADE
             await sql.query`DELETE FROM Questions WHERE QuestionID = ${id}`;
         }
 
