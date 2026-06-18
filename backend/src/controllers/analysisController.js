@@ -207,12 +207,27 @@ const getIncorrectAnswersWithTags = async (req, res) => {
         const examInfo = examResultInfo.recordset[0];
         console.log('✅ Found exam result:', examInfo);
 
-        // Lấy danh sách câu trả lời sai (không dùng STRING_AGG để tránh lỗi)
+        // Tính displayOrder đúng cho tất cả câu hỏi (không đếm passage)
+        const allNonPassageQuestions = await sql.query`
+            SELECT eq.QuestionID, eq.QuestionOrder
+            FROM Exam_Questions eq
+            INNER JOIN Questions q ON eq.QuestionID = q.QuestionID
+            WHERE eq.ExamID = ${examInfo.ExamID} AND q.IsPassage = 0
+            ORDER BY eq.QuestionOrder ASC`;
+        
+        const displayOrderMap = {};
+        allNonPassageQuestions.recordset.forEach((q, idx) => {
+            displayOrderMap[q.QuestionID] = idx + 1; // 1-based: 1, 2, 3, ..., 40
+        });
+
+        // Lấy danh sách câu trả lời sai VÀ chưa chọn
+        // Dùng Exam_Questions làm bảng gốc, LEFT JOIN ResultDetail để bắt cả câu chưa trả lời
         const incorrectAnswers = await sql.query`
             SELECT 
                 rd.DetailID,
-                rd.QuestionID,
+                eq.QuestionID,
                 rd.DisplayOrder,
+                eq.QuestionOrder,
                 q.Content AS QuestionContent,
                 q.QuestionType,
                 rd.SelectedAnswerID,
@@ -224,15 +239,18 @@ const getIncorrectAnswersWithTags = async (req, res) => {
                 t.TagName,
                 r.ContentURL AS DocumentURL,
                 r.Title AS DocumentTitle
-            FROM ResultDetail rd
-            INNER JOIN Questions q ON rd.QuestionID = q.QuestionID
+            FROM Exam_Questions eq
+            INNER JOIN Questions q ON eq.QuestionID = q.QuestionID
+            LEFT JOIN ResultDetail rd ON rd.QuestionID = eq.QuestionID AND rd.ResultID = ${parsedResultId}
             LEFT JOIN Question_Tags qt ON q.QuestionID = qt.QuestionID
             LEFT JOIN Tags t ON qt.TagID = t.TagID
             LEFT JOIN Resources r ON t.TagID = r.TagID
             LEFT JOIN Answers a_selected ON rd.SelectedAnswerID = a_selected.AnswerID
             LEFT JOIN Answers a_correct ON q.QuestionID = a_correct.QuestionID AND a_correct.IsCorrect = 1
-            WHERE rd.ResultID = ${parsedResultId} AND rd.IsCorrect = 0
-            ORDER BY rd.DisplayOrder ASC, t.TagID ASC`;
+            WHERE eq.ExamID = ${examInfo.ExamID}
+              AND q.IsPassage = 0
+              AND (rd.DetailID IS NULL OR rd.IsCorrect = 0)
+            ORDER BY eq.QuestionOrder ASC, t.TagID ASC`;
 
         console.log('✅ Found incorrect answers:', incorrectAnswers.recordset.length);
 
@@ -248,18 +266,22 @@ const getIncorrectAnswersWithTags = async (req, res) => {
 
                 // Nếu chưa xử lý câu này, tạo object mới
                 if (!processedQuestions[questionKey]) {
+                    const isUnanswered = row.SelectedAnswerID == null;
+                    // Dùng rd.DisplayOrder nếu có, không thì dùng displayOrderMap (chỉ đếm câu hỏi, bỏ passage)
+                    const correctDisplayOrder = row.DisplayOrder || displayOrderMap[row.QuestionID] || 0;
                     processedQuestions[questionKey] = {
                         detailId: row.DetailID,
                         questionId: row.QuestionID,
-                        displayOrder: row.DisplayOrder,
+                        displayOrder: correctDisplayOrder,
                         questionContent: row.QuestionContent,
                         questionType: row.QuestionType,
                         tags: [],
                         studentAnswerId: row.SelectedAnswerID,
-                        studentAnswer: row.StudentAnswer || 'Không chọn',
+                        studentAnswer: isUnanswered ? 'Chưa chọn' : (row.StudentAnswer || 'Không chọn'),
                         correctAnswerId: row.CorrectAnswerID,
                         correctAnswer: row.CorrectAnswer || 'Không có đáp án',
-                        explanation: row.Explanation || 'Không có giải thích'
+                        explanation: row.Explanation || 'Không có giải thích',
+                        isUnanswered: isUnanswered
                     };
                 }
 
@@ -275,7 +297,7 @@ const getIncorrectAnswersWithTags = async (req, res) => {
                 }
             });
 
-            // Chuyển sang array
+            // Chuyển sang array VÀ sắp xếp theo displayOrder tăng dần
             Object.values(processedQuestions).forEach(item => {
                 allIncorrectAnswers.push(item);
 
@@ -294,10 +316,21 @@ const getIncorrectAnswersWithTags = async (req, res) => {
                     }
                 });
             });
+
+            // Sắp xếp danh sách theo displayOrder tăng dần
+            allIncorrectAnswers.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+
+            // Sắp xếp câu hỏi trong từng tag theo displayOrder tăng dần
+            Object.values(groupedByTag).forEach(tagData => {
+                tagData.questions.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+            });
         }
 
         console.log('✅ Processed answers:', allIncorrectAnswers.length, 'questions');
         console.log('✅ Tags:', Object.keys(groupedByTag));
+
+        const totalUnanswered = allIncorrectAnswers.filter(q => q.isUnanswered).length;
+        const totalWrong = allIncorrectAnswers.length - totalUnanswered;
 
         res.json({
             examInfo: {
@@ -310,7 +343,9 @@ const getIncorrectAnswersWithTags = async (req, res) => {
                 score: examInfo.Score,
                 completedTime: examInfo.CompletedTime,
                 completedAt: examInfo.CompletedAt,
-                totalIncorrectAnswers: allIncorrectAnswers.length
+                totalIncorrectAnswers: allIncorrectAnswers.length,
+                totalWrong: totalWrong,
+                totalUnanswered: totalUnanswered
             },
             incorrectAnswers: allIncorrectAnswers,
             groupedByTag: groupedByTag,

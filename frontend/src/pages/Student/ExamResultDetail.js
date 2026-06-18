@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axiosClient from '../../api/axiosClient';
-import { ArrowLeft, Check, X } from 'lucide-react';
+import { ArrowLeft, Check, X, AlertCircle } from 'lucide-react';
 import IncorrectAnswersReview from './IncorrectAnswersReview';
 
 // Helper function to parse Content from JSON format
@@ -46,6 +46,11 @@ const isQuestionCorrect = (question) => {
   return question.data.answers.some(
     (answer) => String(answer.AnswerID) === String(selectedAnswerId) && Number(answer.IsCorrect) === 1
   );
+};
+
+const isQuestionUnanswered = (question) => {
+  const selectedAnswerId = question?.data?.studentAnswer?.SelectedAnswerID;
+  return !selectedAnswerId;
 };
 
 const ExamResultDetail = () => {
@@ -105,8 +110,10 @@ const ExamResultDetail = () => {
   }
 
   const { examInfo, questions = [] } = result;
-  const correctCount = result.examResults?.[0]?.Score ? Math.round((result.examResults[0].Score / 10) * (questions.length || 1)) : 0;
   const totalQuestions = questions.filter(q => q.type === 'question').length || 0;
+  const unansweredCount = questions.filter(q => q.type === 'question' && isQuestionUnanswered(q)).length;
+  const correctCount = result.examResults?.[0]?.Score ? Math.round((result.examResults[0].Score / 10) * totalQuestions) : 0;
+  const wrongCount = totalQuestions - correctCount - unansweredCount;
   const displayNumberMap = buildDisplayNumberMap(questions);
 
   const renderAnswerOptions = (question) => {
@@ -204,7 +211,7 @@ const ExamResultDetail = () => {
 
       <div className="max-w-4xl mx-auto p-8">
         {/* Score Summary */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
           <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-2xl p-6 border border-indigo-200">
             <div className="text-xs text-indigo-600 font-semibold uppercase mb-2">Điểm thi</div>
             <div className="text-4xl font-bold text-indigo-900">{Number(result.examResults[0]?.Score || 0).toFixed(2)}</div>
@@ -219,8 +226,14 @@ const ExamResultDetail = () => {
 
           <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-2xl p-6 border border-orange-200">
             <div className="text-xs text-orange-600 font-semibold uppercase mb-2">Sai</div>
-            <div className="text-4xl font-bold text-orange-900">{totalQuestions - correctCount}</div>
+            <div className="text-4xl font-bold text-orange-900">{wrongCount}</div>
             <div className="text-sm text-orange-700 mt-2">câu</div>
+          </div>
+
+          <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-2xl p-6 border border-yellow-200">
+            <div className="text-xs text-yellow-600 font-semibold uppercase mb-2">Chưa chọn</div>
+            <div className="text-4xl font-bold text-yellow-900">{unansweredCount}</div>
+            <div className="text-sm text-yellow-700 mt-2">câu</div>
           </div>
 
           <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6 border border-gray-200">
@@ -240,7 +253,7 @@ const ExamResultDetail = () => {
                 : 'border-transparent text-gray-600 hover:text-gray-800'
             }`}
           >
-            🎯 Danh sách câu sai
+            🎯 Danh sách câu sai/chưa chọn
           </button>
           <button
             onClick={() => setActiveTab('detailed')}
@@ -309,6 +322,7 @@ const ExamResultDetail = () => {
                       if (questionItem.type === 'question' && questionItem.data.ParentID === item.data.QuestionID) {
                         questionNumber++;
                         const isCorrect = isQuestionCorrect(questionItem);
+                        const unanswered = isQuestionUnanswered(questionItem);
 
                         return (
                           <div
@@ -316,15 +330,17 @@ const ExamResultDetail = () => {
                             className={`rounded-2xl border-2 p-6 mb-6 ${
                               isCorrect
                                 ? 'bg-green-50 border-green-500'
-                                : 'bg-red-50 border-red-500'
+                                : unanswered
+                                  ? 'bg-yellow-50 border-yellow-500'
+                                  : 'bg-red-50 border-red-500'
                             }`}
                           >
                             {/* Question Header */}
                             <div className="flex items-start gap-4 mb-6">
                               <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${
-                                isCorrect ? 'bg-green-500' : 'bg-red-500'
+                                isCorrect ? 'bg-green-500' : unanswered ? 'bg-yellow-500' : 'bg-red-500'
                               }`}>
-                                {isCorrect ? <Check size={20} /> : <X size={20} />}
+                                {isCorrect ? <Check size={20} /> : unanswered ? <AlertCircle size={20} /> : <X size={20} />}
                               </div>
                               <div className="flex-1">
                                 <h3 className="font-semibold text-gray-900 mb-2">
@@ -355,6 +371,7 @@ const ExamResultDetail = () => {
               if (item.type === 'question' && !item.data.ParentID) {
                 questionNumber++;
                 const isCorrect = isQuestionCorrect(item);
+                const unanswered = isQuestionUnanswered(item);
 
                 return (
                   <div
@@ -362,15 +379,17 @@ const ExamResultDetail = () => {
                     className={`rounded-2xl border-2 p-6 ${
                       isCorrect
                         ? 'bg-green-50 border-green-500'
-                        : 'bg-red-50 border-red-500'
+                        : unanswered
+                          ? 'bg-yellow-50 border-yellow-500'
+                          : 'bg-red-50 border-red-500'
                     }`}
                   >
                     {/* Question Header */}
                     <div className="flex items-start gap-4 mb-6">
                       <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${
-                        isCorrect ? 'bg-green-500' : 'bg-red-500'
+                        isCorrect ? 'bg-green-500' : unanswered ? 'bg-yellow-500' : 'bg-red-500'
                       }`}>
-                        {isCorrect ? <Check size={20} /> : <X size={20} />}
+                        {isCorrect ? <Check size={20} /> : unanswered ? <AlertCircle size={20} /> : <X size={20} />}
                       </div>
                       <div className="flex-1">
                         <h3 className="font-semibold text-gray-900 mb-2">

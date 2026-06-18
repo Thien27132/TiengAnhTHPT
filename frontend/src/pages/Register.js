@@ -74,7 +74,7 @@ const Register = () => {
           {/* Logo */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center gap-3 mb-2">
-              <span className="text-4xl">📚</span>
+              <span className="text-4xl">✏️</span>
               <h1 className="text-2xl font-bold text-gray-800">Tiếng Anh THPT</h1>
             </div>
             <p className="text-gray-500 text-sm">Tạo tài khoản mới để luyện thi</p>

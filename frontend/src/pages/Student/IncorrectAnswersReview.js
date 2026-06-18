@@ -63,7 +63,7 @@ const IncorrectAnswersReview = ({ resultId }) => {
         setData(response);
       } catch (err) {
         console.error('Lỗi gọi API:', err);
-        setError(err.response?.data?.message || 'Không thể tải danh sách câu sai');
+        setError(err.response?.data?.message || 'Không thể tải danh sách câu sai/chưa chọn');
       } finally {
         setLoading(false);
       }
@@ -93,7 +93,7 @@ const IncorrectAnswersReview = ({ resultId }) => {
       <div className="flex items-center justify-center p-8">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4"></div>
-          <p className="text-gray-600">Đang tải danh sách câu sai...</p>
+          <p className="text-gray-600">Đang tải danh sách câu sai/chưa chọn...</p>
         </div>
       </div>
     );
@@ -129,11 +129,16 @@ const IncorrectAnswersReview = ({ resultId }) => {
             <p className="text-xs text-gray-500 mt-1">Mức độ: {examInfo.level}</p>
           </div>
           <div>
-            <p className="text-sm text-gray-600">Tổng câu sai</p>
+            <p className="text-sm text-gray-600">Tổng câu sai/chưa chọn</p>
             <div className="flex items-baseline gap-2">
               <p className="text-3xl font-bold text-red-600">{totalQuestions}</p>
               <p className="text-gray-600">câu</p>
             </div>
+            {examInfo.totalUnanswered > 0 && (
+              <p className="text-xs text-gray-500 mt-1">
+                ({examInfo.totalWrong || 0} sai, {examInfo.totalUnanswered} chưa chọn)
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -148,7 +153,7 @@ const IncorrectAnswersReview = ({ resultId }) => {
               : 'border-transparent text-gray-600 hover:text-gray-800'
           }`}
         >
-          📋 Danh sách câu sai ({totalQuestions})
+          📋 Danh sách câu sai/chưa chọn ({totalQuestions})
         </button>
         <button
           onClick={() => setActiveTab('byTag')}
@@ -167,7 +172,7 @@ const IncorrectAnswersReview = ({ resultId }) => {
         <div className="space-y-4">
           {incorrectAnswers.length === 0 ? (
             <div className="text-center py-8 text-green-600">
-              ✅ Tuyệt vời! Bạn trả lời hết tất cả câu hỏi
+              ✅ Tuyệt vời! Bạn trả lời đúng hết tất cả câu hỏi
             </div>
           ) : (
             incorrectAnswers.map((item) => (
@@ -181,8 +186,11 @@ const IncorrectAnswersReview = ({ resultId }) => {
                   className="w-full p-4 flex items-start gap-4 hover:bg-gray-50 transition text-left"
                 >
                   <div className="flex-shrink-0 mt-1">
-                    <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
-                      <X size={18} className="text-red-600" />
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${item.isUnanswered ? 'bg-yellow-100' : 'bg-red-100'}`}>
+                      {item.isUnanswered 
+                        ? <AlertCircle size={18} className="text-yellow-600" />
+                        : <X size={18} className="text-red-600" />
+                      }
                     </div>
                   </div>
 
@@ -224,12 +232,12 @@ const IncorrectAnswersReview = ({ resultId }) => {
                 {expandedQuestions[item.questionId] && (
                   <div className="px-4 pb-4 pt-2 border-t bg-gray-50 space-y-3">
                     {/* Student answer */}
-                    <div className="bg-white rounded p-3 border-l-4 border-red-400">
+                    <div className={`bg-white rounded p-3 border-l-4 ${item.isUnanswered ? 'border-yellow-400' : 'border-red-400'}`}>
                       <p className="text-xs font-semibold text-gray-600 uppercase mb-1">
-                        ❌ Bạn trả lời
+                        {item.isUnanswered ? '⚠️ Chưa chọn đáp án' : '❌ Bạn trả lời'}
                       </p>
-                      <p className="text-sm text-gray-800">
-                        {stripHtml(item.studentAnswer)}
+                      <p className={`text-sm ${item.isUnanswered ? 'text-yellow-700 italic' : 'text-gray-800'}`}>
+                        {item.isUnanswered ? 'Bạn chưa chọn đáp án cho câu này' : stripHtml(item.studentAnswer)}
                       </p>
                     </div>
 
@@ -294,7 +302,7 @@ const IncorrectAnswersReview = ({ resultId }) => {
                           <BookOpen size={20} className="text-indigo-600" />
                           <div>
                             <p className="font-semibold text-gray-800">{tagName}</p>
-                            <p className="text-sm text-gray-600">{wrongCount} câu sai</p>
+                            <p className="text-sm text-gray-600">{wrongCount} câu sai/chưa chọn</p>
                           </div>
                         </div>
                         <div className="text-2xl font-bold text-red-500">{wrongCount}</div>
@@ -316,7 +324,11 @@ const IncorrectAnswersReview = ({ resultId }) => {
                               />
                               <div className="mt-2 space-y-1">
                                 <p className="text-xs text-gray-600">
-                                  <span className="font-semibold">Bạn trả lời:</span> {stripHtml(item.studentAnswer)}
+                                  <span className="font-semibold">Bạn trả lời:</span>{' '}
+                                  {item.isUnanswered 
+                                    ? <span className="text-yellow-600 italic">Chưa chọn</span>
+                                    : stripHtml(item.studentAnswer)
+                                  }
                                 </p>
                                 <p className="text-xs text-green-700">
                                   <span className="font-semibold">Đáp án đúng:</span> {stripHtml(item.correctAnswer)}
@@ -364,7 +376,7 @@ const IncorrectAnswersReview = ({ resultId }) => {
       {/* Footer - Tóm tắt */}
       <div className="bg-indigo-50 rounded-lg p-4 border border-indigo-200">
         <p className="text-sm text-indigo-900">
-          <span className="font-semibold">💡 Gợi ý:</span> Tập trung ôn tập các chủ đề có nhiều câu sai. 
+          <span className="font-semibold">💡 Gợi ý:</span> Tập trung ôn tập các chủ đề có nhiều câu sai/chưa chọn. 
           Xem phần "Phân loại theo Tag" để xác định điểm yếu và truy cập tài liệu ôn tập tương ứng.
         </p>
       </div>
