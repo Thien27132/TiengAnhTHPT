@@ -278,18 +278,18 @@ const ExamResultDetail = () => {
             <button
               onClick={() => setActiveTab('review')}
               className={`px-4 py-3 font-medium border-b-2 transition ${activeTab === 'review'
-                  ? 'border-indigo-600 text-indigo-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-800'
+                ? 'border-indigo-600 text-indigo-600'
+                : 'border-transparent text-gray-600 hover:text-gray-800'
                 }`}
             >
-              🎯 Danh sách câu sai/chưa chọn
+              🎯 Tổng hợp câu sai/chưa chọn
             </button>
           )}
           <button
             onClick={() => setActiveTab('detailed')}
             className={`px-4 py-3 font-medium border-b-2 transition ${(activeTab === 'detailed' || isPerfectScore)
-                ? 'border-indigo-600 text-indigo-600'
-                : 'border-transparent text-gray-600 hover:text-gray-800'
+              ? 'border-indigo-600 text-indigo-600'
+              : 'border-transparent text-gray-600 hover:text-gray-800'
               }`}
           >
             📝 Xem chi tiết
@@ -357,10 +357,10 @@ const ExamResultDetail = () => {
                             <div
                               key={`question-${questionItem.data.QuestionID}`}
                               className={`rounded-2xl border-2 p-6 mb-6 ${isCorrect
-                                  ? 'bg-green-50 border-green-500'
-                                  : unanswered
-                                    ? 'bg-yellow-50 border-yellow-500'
-                                    : 'bg-red-50 border-red-500'
+                                ? 'bg-green-50 border-green-500'
+                                : unanswered
+                                  ? 'bg-yellow-50 border-yellow-500'
+                                  : 'bg-red-50 border-red-500'
                                 }`}
                             >
                               {/* Question Header */}
@@ -404,10 +404,10 @@ const ExamResultDetail = () => {
                     <div
                       key={`question-${item.data.QuestionID}`}
                       className={`rounded-2xl border-2 p-6 ${isCorrect
-                          ? 'bg-green-50 border-green-500'
-                          : unanswered
-                            ? 'bg-yellow-50 border-yellow-500'
-                            : 'bg-red-50 border-red-500'
+                        ? 'bg-green-50 border-green-500'
+                        : unanswered
+                          ? 'bg-yellow-50 border-yellow-500'
+                          : 'bg-red-50 border-red-500'
                         }`}
                     >
                       {/* Question Header */}
