@@ -10,7 +10,6 @@ import { QuestionDetail } from './pages/Admin/QuestionManager/index';
 import ExamManager from './pages/Admin/ExamManager';
 import ExamDetail from './pages/Admin/ExamDetail';
 import ResourceManager from './pages/Admin/ResourceManager';
-import AnalysisPage from './pages/AnalysisPage';
 
 // Student Pages
 import StudentDashboard from './pages/Student/StudentDashboard';
@@ -35,9 +34,6 @@ function App() {
           <Route path="exams/:id" element={<ExamDetail />} />
           <Route path="resources" element={<ResourceManager />} />
         </Route>
-
-        {/* Trang Phân Tích - Dành cho Admin */}
-        <Route path="/analysis" element={<PrivateRoute role="Admin"><AnalysisPage /></PrivateRoute>} />
 
         {/* Khu vực HỌC SINH */}
         <Route path="/dashboard" element={<PrivateRoute><StudentDashboard /></PrivateRoute>} />
