@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axiosClient from '../../api/axiosClient';
-import { ArrowLeft, Check, X, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Check, X, AlertCircle, Award } from 'lucide-react';
 import IncorrectAnswersReview from './IncorrectAnswersReview';
 
 // Helper function to parse Content from JSON format
@@ -82,6 +82,18 @@ const ExamResultDetail = () => {
     }
   }, [resultId, navigate]);
 
+  // Tính toán isPerfectScore từ result
+  const totalQuestionsForCheck = result ? (result.questions || []).filter(q => q.type === 'question').length : 0;
+  const correctCountForCheck = result?.examResults?.[0]?.Score ? Math.round((result.examResults[0].Score / 10) * totalQuestionsForCheck) : 0;
+  const isPerfectScore = totalQuestionsForCheck > 0 && correctCountForCheck === totalQuestionsForCheck;
+
+  // Tự động chuyển sang tab 'detailed' khi điểm tuyệt đối
+  useEffect(() => {
+    if (isPerfectScore) {
+      setActiveTab('detailed');
+    }
+  }, [isPerfectScore]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -96,7 +108,7 @@ const ExamResultDetail = () => {
   if (!result) {
     return (
       <div className="min-h-screen bg-slate-50 p-8">
-        <button 
+        <button
           onClick={() => navigate('/exam-history')}
           className="text-indigo-600 hover:text-indigo-700 transition flex items-center gap-2 mb-6"
         >
@@ -121,7 +133,7 @@ const ExamResultDetail = () => {
       console.warn('No answers for question:', question);
       return null;
     }
-    
+
     const studentAnswerId = question.data.studentAnswer?.SelectedAnswerID;
     const correctAnswer = question.data.answers.find(a => Number(a.IsCorrect) === 1);
 
@@ -187,7 +199,7 @@ const ExamResultDetail = () => {
         {correctAnswer?.Explanation && (
           <div className="p-4 bg-blue-50 rounded-lg border border-blue-300">
             <div className="text-xs font-semibold text-blue-700 uppercase mb-2">💡 Lời giải thích</div>
-            <div 
+            <div
               className="text-blue-900 text-sm"
               dangerouslySetInnerHTML={{ __html: correctAnswer.Explanation || '' }}
             />
@@ -200,7 +212,7 @@ const ExamResultDetail = () => {
   return (
     <div className="min-h-screen bg-slate-50">
       <nav className="bg-white border-b px-8 py-4 sticky top-0 z-10 shadow-sm">
-        <button 
+        <button
           onClick={() => navigate('/exam-history')}
           className="text-indigo-600 hover:text-indigo-700 transition flex items-center gap-2 mb-4"
         >
@@ -243,32 +255,49 @@ const ExamResultDetail = () => {
           </div>
         </div>
 
+        {/* Thông báo điểm tuyệt đối */}
+        {isPerfectScore && (
+          <div className="mb-8 bg-gradient-to-r from-emerald-50 via-green-50 to-teal-50 rounded-2xl p-8 border-2 border-green-300 shadow-lg relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-green-200/40 to-transparent rounded-bl-full"></div>
+            <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-emerald-200/30 to-transparent rounded-tr-full"></div>
+            <div className="relative flex items-center gap-5">
+              <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-green-400 to-emerald-500 rounded-2xl flex items-center justify-center shadow-lg">
+                <Award size={32} className="text-white" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-green-800 mb-1">🎉 Xuất sắc! Điểm tuyệt đối!</h3>
+                <p className="text-green-700 text-base">Chúc mừng bạn đã nắm vững toàn bộ kiến thức của bài thi này!</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Tab Navigation */}
         <div className="flex gap-2 border-b mb-8 sticky top-20 bg-slate-50 z-20 -mx-8 px-8 py-2">
-          <button
-            onClick={() => setActiveTab('review')}
-            className={`px-4 py-3 font-medium border-b-2 transition ${
-              activeTab === 'review'
-                ? 'border-indigo-600 text-indigo-600'
-                : 'border-transparent text-gray-600 hover:text-gray-800'
-            }`}
-          >
-            🎯 Danh sách câu sai/chưa chọn
-          </button>
+          {!isPerfectScore && (
+            <button
+              onClick={() => setActiveTab('review')}
+              className={`px-4 py-3 font-medium border-b-2 transition ${activeTab === 'review'
+                  ? 'border-indigo-600 text-indigo-600'
+                  : 'border-transparent text-gray-600 hover:text-gray-800'
+                }`}
+            >
+              🎯 Danh sách câu sai/chưa chọn
+            </button>
+          )}
           <button
             onClick={() => setActiveTab('detailed')}
-            className={`px-4 py-3 font-medium border-b-2 transition ${
-              activeTab === 'detailed'
+            className={`px-4 py-3 font-medium border-b-2 transition ${(activeTab === 'detailed' || isPerfectScore)
                 ? 'border-indigo-600 text-indigo-600'
                 : 'border-transparent text-gray-600 hover:text-gray-800'
-            }`}
+              }`}
           >
             📝 Xem chi tiết
           </button>
         </div>
 
-        {/* Tab Content - Danh sách câu sai kèm Tag */}
-        {activeTab === 'review' && (
+        {/* Tab Content - Danh sách câu sai kèm Tag (ẩn khi điểm tuyệt đối) */}
+        {activeTab === 'review' && !isPerfectScore && (
           <div className="mb-8">
             <IncorrectAnswersReview resultId={resultId} />
           </div>
@@ -278,143 +307,139 @@ const ExamResultDetail = () => {
         {activeTab === 'detailed' && (
           <div className="space-y-8">
             {(() => {
-            let questionNumber = 0;
-            return questions.map((item, passageIndex) => {
-              if (item.type === 'passage') {
-                // Parse passage content
-                const parsedContent = parseContent(item.data.Content);
-                const childQuestions = questions
-                  .filter(questionItem => questionItem.type === 'question' && questionItem.data.ParentID === item.data.QuestionID)
-                  .map(q => ({ displayNumber: displayNumberMap[q.data.QuestionID] }));
+              let questionNumber = 0;
+              return questions.map((item, passageIndex) => {
+                if (item.type === 'passage') {
+                  // Parse passage content
+                  const parsedContent = parseContent(item.data.Content);
+                  const childQuestions = questions
+                    .filter(questionItem => questionItem.type === 'question' && questionItem.data.ParentID === item.data.QuestionID)
+                    .map(q => ({ displayNumber: displayNumberMap[q.data.QuestionID] }));
 
-                const promptHtml = replaceBlanksWithNumbers(parsedContent.prompt || item.data.Content || '', childQuestions);
-                const passageHtml = parsedContent.passage && parsedContent.passage.trim()
-                  ? replaceBlanksWithNumbers(parsedContent.passage, childQuestions)
-                  : null;
+                  const promptHtml = replaceBlanksWithNumbers(parsedContent.prompt || item.data.Content || '', childQuestions);
+                  const passageHtml = parsedContent.passage && parsedContent.passage.trim()
+                    ? replaceBlanksWithNumbers(parsedContent.passage, childQuestions)
+                    : null;
 
-                // Render passage with its child questions
-                return (
-                  <div key={`passage-${passageIndex}`}>
-                    {/* Passage Content */}
-                    <div className="bg-white rounded-2xl p-6 border border-gray-200 mb-6">
-                      <div className="p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
-                        <h3 className="text-sm font-semibold text-blue-800 mb-2">📖 Đề bài</h3>
-                        <div 
-                          className="text-gray-800 leading-relaxed"
-                          dangerouslySetInnerHTML={{ __html: promptHtml }}
-                        />
-                      </div>
-                      
-                      {/* Passage text */}
-                      {passageHtml && (
-                        <div className="p-4 mt-4 bg-gray-50 border-l-4 border-gray-400 rounded">
-                          <h3 className="text-sm font-semibold text-gray-700 mb-2">📝 Đoạn văn</h3>
-                          <div 
+                  // Render passage with its child questions
+                  return (
+                    <div key={`passage-${passageIndex}`}>
+                      {/* Passage Content */}
+                      <div className="bg-white rounded-2xl p-6 border border-gray-200 mb-6">
+                        <div className="p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
+                          <h3 className="text-sm font-semibold text-blue-800 mb-2">📖 Đề bài</h3>
+                          <div
                             className="text-gray-800 leading-relaxed"
-                            dangerouslySetInnerHTML={{ __html: passageHtml }}
+                            dangerouslySetInnerHTML={{ __html: promptHtml }}
                           />
                         </div>
-                      )}
-                    </div>
 
-                    {/* Find and render child questions for this passage */}
-                    {questions.map((questionItem, qIndex) => {
-                      if (questionItem.type === 'question' && questionItem.data.ParentID === item.data.QuestionID) {
-                        questionNumber++;
-                        const isCorrect = isQuestionCorrect(questionItem);
-                        const unanswered = isQuestionUnanswered(questionItem);
-
-                        return (
-                          <div
-                            key={`question-${questionItem.data.QuestionID}`}
-                            className={`rounded-2xl border-2 p-6 mb-6 ${
-                              isCorrect
-                                ? 'bg-green-50 border-green-500'
-                                : unanswered
-                                  ? 'bg-yellow-50 border-yellow-500'
-                                  : 'bg-red-50 border-red-500'
-                            }`}
-                          >
-                            {/* Question Header */}
-                            <div className="flex items-start gap-4 mb-6">
-                              <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${
-                                isCorrect ? 'bg-green-500' : unanswered ? 'bg-yellow-500' : 'bg-red-500'
-                              }`}>
-                                {isCorrect ? <Check size={20} /> : unanswered ? <AlertCircle size={20} /> : <X size={20} />}
-                              </div>
-                              <div className="flex-1">
-                                <h3 className="font-semibold text-gray-900 mb-2">
-                                  Câu {questionNumber}
-                                </h3>
-                                <div 
-                                  className="text-gray-800 font-medium"
-                                  dangerouslySetInnerHTML={{ __html: questionItem.data.Content || 'Không có nội dung' }}
-                                />
-                              </div>
-                            </div>
-
-                            {/* Answer Options & Explanation */}
-                            <div className="ml-14 mb-4">
-                              <div className="text-sm font-semibold text-gray-600 mb-3">Các đáp án:</div>
-                              {renderAnswerOptions(questionItem)}
-                            </div>
+                        {/* Passage text */}
+                        {passageHtml && (
+                          <div className="p-4 mt-4 bg-gray-50 border-l-4 border-gray-400 rounded">
+                            <h3 className="text-sm font-semibold text-gray-700 mb-2">📝 Đoạn văn</h3>
+                            <div
+                              className="text-gray-800 leading-relaxed"
+                              dangerouslySetInnerHTML={{ __html: passageHtml }}
+                            />
                           </div>
-                        );
-                      }
-                      return null;
-                    })}
-                  </div>
-                );
-              }
-
-              // Render standalone questions (no parent)
-              if (item.type === 'question' && !item.data.ParentID) {
-                questionNumber++;
-                const isCorrect = isQuestionCorrect(item);
-                const unanswered = isQuestionUnanswered(item);
-
-                return (
-                  <div
-                    key={`question-${item.data.QuestionID}`}
-                    className={`rounded-2xl border-2 p-6 ${
-                      isCorrect
-                        ? 'bg-green-50 border-green-500'
-                        : unanswered
-                          ? 'bg-yellow-50 border-yellow-500'
-                          : 'bg-red-50 border-red-500'
-                    }`}
-                  >
-                    {/* Question Header */}
-                    <div className="flex items-start gap-4 mb-6">
-                      <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${
-                        isCorrect ? 'bg-green-500' : unanswered ? 'bg-yellow-500' : 'bg-red-500'
-                      }`}>
-                        {isCorrect ? <Check size={20} /> : unanswered ? <AlertCircle size={20} /> : <X size={20} />}
+                        )}
                       </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900 mb-2">
-                          Câu {questionNumber}
-                        </h3>
-                        <div 
-                          className="text-gray-800 font-medium"
-                          dangerouslySetInnerHTML={{ __html: item.data.Content || 'Không có nội dung' }}
-                        />
+
+                      {/* Find and render child questions for this passage */}
+                      {questions.map((questionItem, qIndex) => {
+                        if (questionItem.type === 'question' && questionItem.data.ParentID === item.data.QuestionID) {
+                          questionNumber++;
+                          const isCorrect = isQuestionCorrect(questionItem);
+                          const unanswered = isQuestionUnanswered(questionItem);
+
+                          return (
+                            <div
+                              key={`question-${questionItem.data.QuestionID}`}
+                              className={`rounded-2xl border-2 p-6 mb-6 ${isCorrect
+                                  ? 'bg-green-50 border-green-500'
+                                  : unanswered
+                                    ? 'bg-yellow-50 border-yellow-500'
+                                    : 'bg-red-50 border-red-500'
+                                }`}
+                            >
+                              {/* Question Header */}
+                              <div className="flex items-start gap-4 mb-6">
+                                <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${isCorrect ? 'bg-green-500' : unanswered ? 'bg-yellow-500' : 'bg-red-500'
+                                  }`}>
+                                  {isCorrect ? <Check size={20} /> : unanswered ? <AlertCircle size={20} /> : <X size={20} />}
+                                </div>
+                                <div className="flex-1">
+                                  <h3 className="font-semibold text-gray-900 mb-2">
+                                    Câu {questionNumber}
+                                  </h3>
+                                  <div
+                                    className="text-gray-800 font-medium"
+                                    dangerouslySetInnerHTML={{ __html: questionItem.data.Content || 'Không có nội dung' }}
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Answer Options & Explanation */}
+                              <div className="ml-14 mb-4">
+                                <div className="text-sm font-semibold text-gray-600 mb-3">Các đáp án:</div>
+                                {renderAnswerOptions(questionItem)}
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })}
+                    </div>
+                  );
+                }
+
+                // Render standalone questions (no parent)
+                if (item.type === 'question' && !item.data.ParentID) {
+                  questionNumber++;
+                  const isCorrect = isQuestionCorrect(item);
+                  const unanswered = isQuestionUnanswered(item);
+
+                  return (
+                    <div
+                      key={`question-${item.data.QuestionID}`}
+                      className={`rounded-2xl border-2 p-6 ${isCorrect
+                          ? 'bg-green-50 border-green-500'
+                          : unanswered
+                            ? 'bg-yellow-50 border-yellow-500'
+                            : 'bg-red-50 border-red-500'
+                        }`}
+                    >
+                      {/* Question Header */}
+                      <div className="flex items-start gap-4 mb-6">
+                        <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${isCorrect ? 'bg-green-500' : unanswered ? 'bg-yellow-500' : 'bg-red-500'
+                          }`}>
+                          {isCorrect ? <Check size={20} /> : unanswered ? <AlertCircle size={20} /> : <X size={20} />}
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-gray-900 mb-2">
+                            Câu {questionNumber}
+                          </h3>
+                          <div
+                            className="text-gray-800 font-medium"
+                            dangerouslySetInnerHTML={{ __html: item.data.Content || 'Không có nội dung' }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Answer Options & Explanation */}
+                      <div className="ml-14 mb-4">
+                        <div className="text-sm font-semibold text-gray-600 mb-3">Các đáp án:</div>
+                        {renderAnswerOptions(item)}
                       </div>
                     </div>
+                  );
+                }
 
-                    {/* Answer Options & Explanation */}
-                    <div className="ml-14 mb-4">
-                      <div className="text-sm font-semibold text-gray-600 mb-3">Các đáp án:</div>
-                      {renderAnswerOptions(item)}
-                    </div>
-                  </div>
-                );
-              }
-
-              return null;
-            });
-          })()}
-        </div>
+                return null;
+              });
+            })()}
+          </div>
         )}
 
       </div>

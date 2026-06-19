@@ -9,6 +9,7 @@ const RecommendedDocuments = ({ studentId }) => {
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [documentErrors, setDocumentErrors] = useState({}); // Track broken document links
 
   useEffect(() => {
     const fetchRecommendations = async () => {
@@ -31,9 +32,30 @@ const RecommendedDocuments = ({ studentId }) => {
     }
   }, [studentId]);
 
-  const openDocument = (documentUrl) => {
-    if (documentUrl) {
-      window.open(`${BACKEND_URL}${documentUrl}`, '_blank');
+  const openDocument = async (documentUrl, tagId) => {
+    if (!documentUrl) return;
+    const fullUrl = `${BACKEND_URL}${documentUrl}`;
+    try {
+      const response = await fetch(fullUrl, { method: 'HEAD' });
+      if (response.ok) {
+        window.open(fullUrl, '_blank');
+        // Xóa lỗi cũ nếu có
+        if (tagId && documentErrors[tagId]) {
+          setDocumentErrors(prev => {
+            const next = { ...prev };
+            delete next[tagId];
+            return next;
+          });
+        }
+      } else {
+        if (tagId) {
+          setDocumentErrors(prev => ({ ...prev, [tagId]: true }));
+        }
+      }
+    } catch (err) {
+      if (tagId) {
+        setDocumentErrors(prev => ({ ...prev, [tagId]: true }));
+      }
     }
   };
 
@@ -182,16 +204,24 @@ const RecommendedDocuments = ({ studentId }) => {
                   {/* Action buttons */}
                   <div className="flex-shrink-0 flex gap-2">
                     {doc.documentUrl ? (
-                      <>
+                      documentErrors[doc.tagId] ? (
+                        <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl">
+                          <AlertTriangle size={14} className="text-amber-600 flex-shrink-0" />
+                          <div>
+                            <p className="text-xs font-semibold text-amber-700">Tài liệu đang được hệ thống cập nhật.</p>
+                            <p className="text-xs text-amber-600">Vui lòng quay lại sau!</p>
+                          </div>
+                        </div>
+                      ) : (
                         <button
-                          onClick={() => openDocument(doc.documentUrl)}
+                          onClick={() => openDocument(doc.documentUrl, doc.tagId)}
                           className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-xl text-sm font-medium hover:from-purple-600 hover:to-indigo-700 transition shadow-sm"
                         >
                           <FileText size={14} />
                           Xem tài liệu
                           <ExternalLink size={12} className="opacity-75" />
                         </button>
-                      </>
+                      )
                     ) : (
                       <span className="text-xs text-gray-400 italic px-3 py-2">Chưa có tài liệu</span>
                     )}

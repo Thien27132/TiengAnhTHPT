@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axiosClient from '../../api/axiosClient';
-import { X, Check, AlertCircle, BookOpen, FileText, ExternalLink } from 'lucide-react';
+import { X, AlertCircle, BookOpen, FileText, ExternalLink, AlertTriangle } from 'lucide-react';
 
 // Helper: strip HTML tags và decode HTML entities
 const stripHtml = (html) => {
@@ -50,6 +50,7 @@ const IncorrectAnswersReview = ({ resultId }) => {
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('list'); // 'list' | 'byTag'
   const [expandedQuestions, setExpandedQuestions] = useState({});
+  const [documentErrors, setDocumentErrors] = useState({}); // Track document access errors per tag
 
   useEffect(() => {
     const fetchIncorrectAnswers = async () => {
@@ -81,10 +82,33 @@ const IncorrectAnswersReview = ({ resultId }) => {
     }));
   };
 
-  // Mở tài liệu PDF trong tab mới
-  const openDocument = (documentUrl) => {
-    if (documentUrl) {
-      window.open(`${BACKEND_URL}${documentUrl}`, '_blank');
+  // Mở tài liệu PDF trong tab mới, kiểm tra trước khi mở
+  const openDocument = async (documentUrl, tagName) => {
+    if (!documentUrl) return;
+    const fullUrl = `${BACKEND_URL}${documentUrl}`;
+    try {
+      const response = await fetch(fullUrl, { method: 'HEAD' });
+      if (response.ok) {
+        window.open(fullUrl, '_blank');
+        // Xóa lỗi cũ nếu có
+        if (tagName && documentErrors[tagName]) {
+          setDocumentErrors(prev => {
+            const next = { ...prev };
+            delete next[tagName];
+            return next;
+          });
+        }
+      } else {
+        // File không tồn tại (404, 403, etc.)
+        if (tagName) {
+          setDocumentErrors(prev => ({ ...prev, [tagName]: true }));
+        }
+      }
+    } catch (err) {
+      // Network error hoặc CORS
+      if (tagName) {
+        setDocumentErrors(prev => ({ ...prev, [tagName]: true }));
+      }
     }
   };
 
@@ -147,21 +171,19 @@ const IncorrectAnswersReview = ({ resultId }) => {
       <div className="flex gap-2 border-b">
         <button
           onClick={() => setActiveTab('list')}
-          className={`px-4 py-3 font-medium border-b-2 transition ${
-            activeTab === 'list'
+          className={`px-4 py-3 font-medium border-b-2 transition ${activeTab === 'list'
               ? 'border-indigo-600 text-indigo-600'
               : 'border-transparent text-gray-600 hover:text-gray-800'
-          }`}
+            }`}
         >
           📋 Danh sách câu sai/chưa chọn ({totalQuestions})
         </button>
         <button
           onClick={() => setActiveTab('byTag')}
-          className={`px-4 py-3 font-medium border-b-2 transition ${
-            activeTab === 'byTag'
+          className={`px-4 py-3 font-medium border-b-2 transition ${activeTab === 'byTag'
               ? 'border-indigo-600 text-indigo-600'
               : 'border-transparent text-gray-600 hover:text-gray-800'
-          }`}
+            }`}
         >
           🏷️ Phân loại theo Tag ({Object.keys(groupedByTag).length})
         </button>
@@ -187,7 +209,7 @@ const IncorrectAnswersReview = ({ resultId }) => {
                 >
                   <div className="flex-shrink-0 mt-1">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center ${item.isUnanswered ? 'bg-yellow-100' : 'bg-red-100'}`}>
-                      {item.isUnanswered 
+                      {item.isUnanswered
                         ? <AlertCircle size={18} className="text-yellow-600" />
                         : <X size={18} className="text-red-600" />
                       }
@@ -205,11 +227,10 @@ const IncorrectAnswersReview = ({ resultId }) => {
                           dangerouslySetInnerHTML={{ __html: item.questionContent }}
                         />
                       </div>
-                      <span className={`flex-shrink-0 ml-2 px-2 py-1 text-xs rounded ${
-                        expandedQuestions[item.questionId]
+                      <span className={`flex-shrink-0 ml-2 px-2 py-1 text-xs rounded ${expandedQuestions[item.questionId]
                           ? 'bg-indigo-100 text-indigo-700'
                           : 'bg-gray-100 text-gray-600'
-                      }`}>
+                        }`}>
                         {expandedQuestions[item.questionId] ? '▼' : '▶'}
                       </span>
                     </div>
@@ -325,7 +346,7 @@ const IncorrectAnswersReview = ({ resultId }) => {
                               <div className="mt-2 space-y-1">
                                 <p className="text-xs text-gray-600">
                                   <span className="font-semibold">Bạn trả lời:</span>{' '}
-                                  {item.isUnanswered 
+                                  {item.isUnanswered
                                     ? <span className="text-yellow-600 italic">Chưa chọn</span>
                                     : stripHtml(item.studentAnswer)
                                   }
@@ -342,28 +363,40 @@ const IncorrectAnswersReview = ({ resultId }) => {
 
                     {/* Gợi ý tài liệu ôn tập — nằm cuối mỗi nhóm tag */}
                     {documentUrl && (
-                      <div className={`p-4 border-t ${recommendation.bgColor} ${recommendation.borderColor}`}>
-                        <div className="flex items-center justify-between flex-wrap gap-3">
+                      <div className={`p-4 border-t ${documentErrors[tagName] ? 'bg-amber-50 border-amber-300' : `${recommendation.bgColor} ${recommendation.borderColor}`}`}>
+                        {documentErrors[tagName] ? (
                           <div className="flex items-center gap-3">
-                            <FileText size={18} className={recommendation.color} />
+                            <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
+                              <AlertTriangle size={20} className="text-amber-600" />
+                            </div>
                             <div>
-                              <span className={`text-sm font-bold ${recommendation.color}`}>
-                                {recommendation.label}
-                              </span>
-                              <p className="text-xs text-gray-600 mt-0.5">
-                                {documentTitle || `Tài liệu ôn tập: ${tagName}`}
-                              </p>
+                              <p className="text-sm font-semibold text-amber-700">Tài liệu đang được hệ thống cập nhật</p>
+                              <p className="text-xs text-amber-600 mt-0.5">Vui lòng quay lại sau!</p>
                             </div>
                           </div>
-                          <button
-                            onClick={() => openDocument(documentUrl)}
-                            className={`inline-flex items-center gap-1.5 px-4 py-2 ${recommendation.btnBg} text-white rounded-lg text-sm font-medium transition shadow-sm`}
-                          >
-                            <FileText size={14} />
-                            Xem tài liệu
-                            <ExternalLink size={12} className="opacity-75" />
-                          </button>
-                        </div>
+                        ) : (
+                          <div className="flex items-center justify-between flex-wrap gap-3">
+                            <div className="flex items-center gap-3">
+                              <FileText size={18} className={recommendation.color} />
+                              <div>
+                                <span className={`text-sm font-bold ${recommendation.color}`}>
+                                  {recommendation.label}
+                                </span>
+                                <p className="text-xs text-gray-600 mt-0.5">
+                                  {documentTitle || `Tài liệu ôn tập: ${tagName}`}
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => openDocument(documentUrl, tagName)}
+                              className={`inline-flex items-center gap-1.5 px-4 py-2 ${recommendation.btnBg} text-white rounded-lg text-sm font-medium transition shadow-sm`}
+                            >
+                              <FileText size={14} />
+                              Xem tài liệu
+                              <ExternalLink size={12} className="opacity-75" />
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -376,7 +409,7 @@ const IncorrectAnswersReview = ({ resultId }) => {
       {/* Footer - Tóm tắt */}
       <div className="bg-indigo-50 rounded-lg p-4 border border-indigo-200">
         <p className="text-sm text-indigo-900">
-          <span className="font-semibold">💡 Gợi ý:</span> Tập trung ôn tập các chủ đề có nhiều câu sai/chưa chọn. 
+          <span className="font-semibold">💡 Gợi ý:</span> Tập trung ôn tập các chủ đề có nhiều câu sai/chưa chọn.
           Xem phần "Phân loại theo Tag" để xác định điểm yếu và truy cập tài liệu ôn tập tương ứng.
         </p>
       </div>
