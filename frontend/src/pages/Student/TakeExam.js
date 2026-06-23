@@ -271,8 +271,15 @@ const TakeExam = () => {
     }, [examData, id, navigate, userAnswers, displayOrderMap]);
 
     const handleManualSubmit = () => {
-        if (window.confirm('Bạn có chắc chắn muốn nộp bài sớm không?')) {
-            submitExamData();
+        const unansweredCount = nonPassageQuestions.filter(q => userAnswers[q.QuestionID] == null).length;
+        if (unansweredCount > 0) {
+            if (window.confirm(`Bạn còn ${unansweredCount} câu chưa làm. Bạn vẫn chắc chắn muốn nộp bài?`)) {
+                submitExamData();
+            }
+        } else {
+            if (window.confirm('Bạn có chắc chắn muốn nộp bài không?')) {
+                submitExamData();
+            }
         }
     };
 
