@@ -54,44 +54,69 @@ const createExam = async (req, res) => {
                 }
             }
         } else {
-            // Define question types to fetch in order to reach ~40 total questions
-            const questionTypes = [
-                'Leaflet',
-                'Ordering',
-                'Context_Filling',
-                'Reading_8',
-                'Reading_10'
+            // Cấu trúc đề thi chuẩn:
+            // 2 bài Leaflet (2 × 6 = 12 câu)
+            // 1 bài Context_Filling (1 × 5 = 5 câu)
+            // 1 bài Ordering (lấy đủ 5 câu con từ các bài Ordering)
+            // 1 bài Reading_10 (1 × 10 = 10 câu)
+            // 1 bài Reading_8 (1 × 8 = 8 câu)
+            // Tổng: 40 câu
+
+            const examStructure = [
+                { type: 'Leaflet', passageCount: 2 },
+                { type: 'Context_Filling', passageCount: 1 },
+                { type: 'Ordering', passageCount: null, childCount: 5 }, // Ordering: lấy đủ 5 câu con
+                { type: 'Reading_10', passageCount: 1 },
+                { type: 'Reading_8', passageCount: 1 }
             ];
 
-            let targetCount = 40;
-            let currentCount = 0;
+            for (const section of examStructure) {
+                if (section.type === 'Ordering') {
+                    // Ordering: mỗi bài có thể có số câu con khác nhau, lấy đủ 5 câu con
+                    let orderingChildCount = 0;
+                    const targetChildren = section.childCount;
 
-            // First pass: get a baseline from each type
-            for (const type of questionTypes) {
-                if (currentCount >= targetCount) break;
+                    const orderingPassages = await sql.query`
+                        SELECT QuestionID FROM Questions 
+                        WHERE QuestionType = 'Ordering' AND IsPassage = 1 AND Level = ${level}
+                        ORDER BY NEWID()`;
 
-                const randomPassages = await sql.query`
-                    SELECT TOP (10) QuestionID FROM Questions 
-                    WHERE QuestionType = ${type} AND IsPassage = 1 AND Level = ${level}
-                    ORDER BY NEWID()`;
+                    for (const p of orderingPassages.recordset) {
+                        if (orderingChildCount >= targetChildren) break;
 
-                if (randomPassages.recordset.length > 0) {
-                    for (const p of randomPassages.recordset) {
-                        if (currentCount >= targetCount) break;
-                        
-                        const pId = p.QuestionID;
-                        finalQuestionIds.push(pId);
-                        currentCount++;
-                        
-                        // Get all child questions for this passage
-                        const relatedQuestions = await sql.query`
+                        const children = await sql.query`
                             SELECT QuestionID FROM Questions 
-                            WHERE ParentID = ${pId}
+                            WHERE ParentID = ${p.QuestionID}
                             ORDER BY QuestionID ASC`;
-                        
-                        const childCount = relatedQuestions.recordset.length;
-                        finalQuestionIds.push(...relatedQuestions.recordset.map(q => q.QuestionID));
-                        currentCount += childCount;
+
+                        // Chỉ lấy bài này nếu tổng câu con không vượt quá target
+                        if (orderingChildCount + children.recordset.length <= targetChildren) {
+                            finalQuestionIds.push(p.QuestionID);
+                            finalQuestionIds.push(...children.recordset.map(q => q.QuestionID));
+                            orderingChildCount += children.recordset.length;
+                        } else if (orderingChildCount < targetChildren) {
+                            // Nếu lấy hết bài sẽ vượt, vẫn lấy để đủ gần nhất
+                            finalQuestionIds.push(p.QuestionID);
+                            finalQuestionIds.push(...children.recordset.map(q => q.QuestionID));
+                            orderingChildCount += children.recordset.length;
+                        }
+                    }
+                } else {
+                    // Các loại khác: lấy đúng số bài (passage) yêu cầu
+                    const randomPassages = await sql.query`
+                        SELECT TOP (${section.passageCount}) QuestionID FROM Questions 
+                        WHERE QuestionType = ${section.type} AND IsPassage = 1 AND Level = ${level}
+                        ORDER BY NEWID()`;
+
+                    for (const p of randomPassages.recordset) {
+                        finalQuestionIds.push(p.QuestionID);
+
+                        const children = await sql.query`
+                            SELECT QuestionID FROM Questions 
+                            WHERE ParentID = ${p.QuestionID}
+                            ORDER BY QuestionID ASC`;
+
+                        finalQuestionIds.push(...children.recordset.map(q => q.QuestionID));
                     }
                 }
             }

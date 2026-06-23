@@ -270,7 +270,7 @@ const QuestionForm = ({
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-6 pb-4 flex-shrink-0">
           <div>
             <h3 className="text-xl font-bold text-gray-900">{editingId ? 'Sửa đề bài' : 'Tạo đề bài mới'}</h3>
-            <p className="text-sm text-gray-500">Nhập đầy đủ đề bài, passage, câu hỏi và đáp án cho từng loại.</p>
+            <p className="text-sm text-gray-500">Nhập đầy đủ đoạn văn, câu hỏi, đáp án, lời giải thích và gắn tag tương ứng cho từng loại bài!</p>
           </div>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-900">Đóng</button>
         </div>
@@ -328,7 +328,7 @@ const QuestionForm = ({
                 [BLANK]
               </button>
             </div>
-            <div className="text-xs text-gray-500">Chọn ô nhập và nhấn nút để áp dụng định dạng HTML.</div>
+            <div className="text-xs text-gray-500">Có thể áp dụng các định dạng cho sẵn!</div>
           </div>
         </div>
 
@@ -349,7 +349,7 @@ const QuestionForm = ({
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Loại đề</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Loại bài</label>
                 <select
                   value={form.questionType}
                   onChange={(e) => {
@@ -378,7 +378,8 @@ const QuestionForm = ({
 
             <div className="space-y-5">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Đoạn văn</label>
+                <h4 className="text-lg font-semibold text-gray-800">Đoạn văn</h4>
+                <br></br>
                 <div
                   ref={(el) => {
                     textareaRefs.current.passage = el;
@@ -395,13 +396,12 @@ const QuestionForm = ({
                   style={{ fontFamily: 'Arial, sans-serif', fontSize: '18px' }}
                   className="min-h-[150px] w-full rounded-3xl border border-gray-300 p-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 whitespace-pre-wrap break-words"
                 />
-                <p className="mt-2 text-xs text-gray-500">Dùng các nút In đậm, Nghiêng, Gạch chân, Căn giữa, Thụt lề để định dạng nội dung và xem trực quan. HTML chỉ lưu khi gửi.</p>
+
               </div>
               <div>
                 <div className="flex items-center justify-between mb-4 gap-4">
                   <div>
                     <h4 className="text-lg font-semibold text-gray-800">Các câu hỏi thành phần</h4>
-                    <p className="text-sm text-gray-500">Tạo đáp án và gán tag cho từng câu hỏi.</p>
                   </div>
                 </div>
                 <div className="space-y-5">

@@ -292,7 +292,7 @@ const ExamResultDetail = () => {
               : 'border-transparent text-gray-600 hover:text-gray-800'
               }`}
           >
-            📝 Xem chi tiết
+            📝 Xem lại bài thi
           </button>
         </div>
 
