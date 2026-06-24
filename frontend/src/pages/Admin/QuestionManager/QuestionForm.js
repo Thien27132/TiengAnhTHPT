@@ -269,7 +269,7 @@ const QuestionForm = ({
       <div className="w-full max-w-6xl bg-white rounded-3xl shadow-2xl max-h-[90vh] flex flex-col">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-6 pb-4 flex-shrink-0">
           <div>
-            <h3 className="text-xl font-bold text-gray-900">{editingId ? 'Sửa đề bài' : 'Tạo đề bài mới'}</h3>
+            <h3 className="text-xl font-bold text-gray-900">{editingId ? 'Sửa bài' : 'Tạo bài mới'}</h3>
             <p className="text-sm text-gray-500">Nhập đầy đủ đoạn văn, câu hỏi, đáp án, lời giải thích và gắn tag tương ứng cho từng loại bài!</p>
           </div>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-900">Đóng</button>
@@ -555,7 +555,7 @@ const QuestionForm = ({
               disabled={isLoading}
               className={`rounded-3xl px-6 py-3 text-white ${isLoading ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}
             >
-              {isLoading ? 'Đang lưu...' : editingId ? 'Cập nhật' : 'Lưu đề bài'}
+              {isLoading ? 'Đang lưu...' : editingId ? 'Cập nhật' : 'Lưu bài'}
             </button>
           </div>
         </div>

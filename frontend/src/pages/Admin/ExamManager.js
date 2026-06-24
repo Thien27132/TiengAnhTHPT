@@ -458,7 +458,7 @@ const ExamManager = () => {
 
             {/* Hiển thị tóm tắt số lượng câu hỏi đã chọn - LUÔN HIỆN VÀ CẬP NHẬT REALTIME */}
             <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <h3 className="text-sm font-semibold text-blue-800 mb-2">Tóm tắt câu hỏi đã chọn:</h3>
+              <h3 className="text-sm font-semibold text-blue-800 mb-2">Tóm tắt số bài đã chọn:</h3>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-sm">
                 {Object.keys(EXAM_REQUIREMENTS).map(type => {
                   const selectedOfType = bankQuestions.filter(q => formData.selectedQuestionIds.includes(q.QuestionID) && q.QuestionType === type);
