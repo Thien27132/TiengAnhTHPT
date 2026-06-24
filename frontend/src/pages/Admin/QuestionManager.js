@@ -241,7 +241,7 @@ const QuestionManager = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
           <div>
             <h2 className="text-2xl font-bold text-gray-800">Ngân hàng câu hỏi</h2>
-            <p className="text-sm text-gray-500 mt-1">Quản lý tìm kiếm, lọc, và tạo đề bài theo loại.</p>
+            <p className="text-sm text-gray-500 mt-1">Quản lý tìm kiếm, lọc, và tạo bài theo loại.</p>
           </div>
           <button
             onClick={() => {

@@ -69,7 +69,7 @@ const StudentDashboard = () => {
               className="mt-6 w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition"
               onClick={() => navigate('/exam-history')}
             >
-              Xem chi tiết
+              Xem lịch sử
             </button>
           </div>
         </div>

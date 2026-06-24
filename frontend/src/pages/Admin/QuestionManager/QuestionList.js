@@ -19,7 +19,7 @@ const QuestionList = ({
         <thead>
           <tr className="bg-gray-50 text-gray-600 uppercase text-sm">
             <th className="p-4 border-b">Đề bài</th>
-            <th className="p-4 border-b">Tags / Kỹ năng</th>
+            <th className="p-4 border-b">Tags</th>
             <th className="p-4 border-b">Loại</th>
             <th className="p-4 border-b">Số câu</th>
             <th className="p-4 border-b">Mức độ</th>

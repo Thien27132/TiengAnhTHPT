@@ -371,8 +371,8 @@ const ResourceManager = () => {
                   type="submit"
                   disabled={isSubmitting}
                   className={`px-5 py-2.5 rounded-xl text-white font-medium transition shadow-sm ${isSubmitting
-                      ? 'bg-gray-400 cursor-not-allowed'
-                      : 'bg-indigo-600 hover:bg-indigo-700'
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-indigo-600 hover:bg-indigo-700'
                     }`}
                 >
                   {isSubmitting ? (
