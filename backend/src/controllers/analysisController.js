@@ -1,7 +1,7 @@
 const sql = require('mssql');
 
 
-// 7. DANH SÁCH CHI TIẾT CÂU TRẢ LỜI SAI KÈM TAG
+// 1. DANH SÁCH CHI TIẾT CÂU TRẢ LỜI SAI KÈM TAG
 const getIncorrectAnswersWithTags = async (req, res) => {
     const { resultId } = req.query;
     const parsedResultId = parseInt(resultId);
@@ -113,7 +113,7 @@ const getIncorrectAnswersWithTags = async (req, res) => {
                     };
                 }
 
-                // Thêm tag nếu tồn tại (giờ bao gồm cả documentUrl)
+                // Thêm tag nếu tồn tại bao gồm cả documentUrl
                 if (row.TagName && row.TagName.trim()) {
                     if (!processedQuestions[questionKey].tags.find(t => t.name === row.TagName)) {
                         processedQuestions[questionKey].tags.push({
@@ -202,11 +202,34 @@ const getStudentSkillMap = async (req, res) => {
         return res.status(400).json({ message: 'Cần cung cấp studentId hợp lệ' });
     }
 
-    // Bộ từ điển ánh xạ Tag -> Skill
+    // Bộ từ điển ánh xạ Tag -> Skill (đủ 43 tags trong hệ thống)
     const skillDictionary = {
-        'Ngữ pháp': ['Mệnh đề quan hệ', 'Thì hiện tại hoàn thành', 'Đại từ', 'Liên từ', 'Giới từ', 'Lượng từ'],
-        'Từ vựng': ['Động từ', 'Danh từ', 'Tính từ', 'Tìm từ đồng nghĩa (Synonym)', 'Trái nghĩa (Opposite questions)', 'Cụm từ cố định (Collocations)', 'Phrasal Verbs'],
-        'Đọc hiểu': ['Đọc điền từ (Cloze test)', 'Câu hỏi chi tiết (Detail)', 'Reference (Câu hỏi quy chiếu)', 'Suy luận (Inference)']
+        'Ngữ pháp': [
+            // 12 Thì
+            'Thì hiện tại đơn', 'Thì hiện tại tiếp diễn', 'Thì hiện tại hoàn thành', 'Thì hiện tại hoàn thành tiếp diễn',
+            'Thì quá khứ đơn', 'Thì quá khứ tiếp diễn', 'Thì quá khứ hoàn thành', 'Thì quá khứ hoàn thành tiếp diễn',
+            'Thì tương lai đơn', 'Thì tương lai tiếp diễn', 'Thì tương lai gần', 'Thì tương lai hoàn thành tiếp diễn',
+            // Cấu trúc câu
+            'Câu so sánh', 'Câu điều kiện', 'Câu điều ước', 'Câu giả định',
+            'Câu chủ/bị động', 'Câu mệnh lệnh', 'Câu hỏi đuôi', 'Câu đảo ngữ',
+            'Câu tường thuật trực tiếp/gián tiếp', 'Mệnh đề quan hệ',
+            // Từ loại chức năng
+            'Đại từ', 'Liên từ', 'Giới từ', 'Lượng từ', 'Mạo từ'
+        ],
+        'Từ vựng': [
+            // Từ loại nội dung
+            'Động từ', 'Danh từ', 'Tính từ', 'Trạng từ',
+            // Cụm từ & thành ngữ
+            'Cụm từ cố định (Collocations)', 'Thành ngữ (Idioms)', 'Cụm động từ (Phrasal Verbs)',
+            'Từ đồng nghĩa/trái nghĩa',
+            // Dạng bài từ vựng
+            'Tìm từ đồng nghĩa (Synonym questions)', 'Tìm từ trái nghĩa (Opposite questions)'
+        ],
+        'Đọc hiểu': [
+            'Đọc điền từ (Cloze test)', 'Tìm ý chính đoạn văn',
+            'Câu hỏi chi tiết (According to the passage)', 'Câu hỏi suy luận (Inference)',
+            'Tìm từ thay thế (Referent questions)', 'Sắp xếp câu và đoạn văn'
+        ]
     };
 
     // Hàm phụ trợ tìm nhóm kỹ năng dựa vào tên Tag

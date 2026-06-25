@@ -14,7 +14,7 @@ const resourceRoutes = require('./src/routes/resourceRoutes');
 
 const app = express();
 
-// --- BỘ MIDDLEWARE (PHẢI ĐỂ LÊN ĐẦU) ---
+// BỘ MIDDLEWARE (PHẢI ĐỂ LÊN ĐẦU)
 app.use(cors());
 app.use(express.json()); 
 app.use(express.urlencoded({ extended: true }));
@@ -22,7 +22,7 @@ app.use(express.urlencoded({ extended: true }));
 // Serve tài liệu PDF tĩnh
 app.use('/documents', express.static(path.join(__dirname, 'public/documents')));
 
-// --- CÁC ROUTE (ĐỂ SAU MIDDLEWARE) ---
+// CÁC ROUTE (ĐỂ SAU MIDDLEWARE) 
 app.use('/api/exams', examRoutes);
 app.use('/api/tags', tagRoutes);
 app.use('/api/questions', questionRoutes);

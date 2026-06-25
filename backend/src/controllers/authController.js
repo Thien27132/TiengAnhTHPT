@@ -21,7 +21,7 @@ const register = async (req, res) => {
         
         const newUserId = result.recordset[0].UserID;
 
-        // 4. INSERT vào bảng con Students (vì bạn dùng kế thừa ISA)
+        // 4. INSERT vào bảng con Students (vì kế thừa ISA)
         await sql.query`INSERT INTO Students (StudentID) VALUES (${newUserId})`;
 
         res.status(201).json({ message: "Đăng ký thành công tài khoản học sinh!" });

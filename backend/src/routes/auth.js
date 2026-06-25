@@ -2,13 +2,13 @@ const express = require('express');
 const router = express.Router();
 const { register, login } = require('../controllers/authController');
 
-// SỬA DÒNG NÀY: Thêm { } để lấy lẻ từng hàm từ Object export ra
+// Lấy lẻ từng hàm từ Object export ra
 const { verifyToken, isAdmin } = require('../middleware/authMiddleware');
 
-// Đường dẫn: POST http://localhost:5000/api/auth/register
+// Đường dẫn đăng ký: POST http://localhost:5000/api/auth/register
 router.post('/register', register);
 
-// Đường dẫn: POST http://localhost:5000/api/auth/login
+// Đường dẫn đăng nhập: POST http://localhost:5000/api/auth/login
 router.post('/login', login);
 
 // Route cho tất cả User đã đăng nhập (Học sinh & Admin)

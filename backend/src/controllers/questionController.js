@@ -123,7 +123,7 @@ const createQuestion = async (req, res) => {
             }
         }
 
-        // Insert child questions, their tags, and answers
+        // Insert câu hỏi con, tags, answers
         for (const item of questions) {
             const childRequest = new sql.Request(transaction);
             childRequest.input('childContent', sql.NVarChar, item.question || '');
@@ -136,7 +136,7 @@ const createQuestion = async (req, res) => {
                 VALUES (@childContent, @level, 0, @parentId, @questionType)`);
             const childQuestionId = childQuestionResult.recordset[0].QuestionID;
 
-            // Insert child question tags
+            // Insert tags cho câu hỏi con
             if (item.tagIds && Array.isArray(item.tagIds) && item.tagIds.length > 0) {
                 for (const tagId of item.tagIds) {
                     const childTagRequest = new sql.Request(transaction);
@@ -146,7 +146,7 @@ const createQuestion = async (req, res) => {
                 }
             }
 
-            // Insert 4 answers for each child question
+            // Insert 4 answers cho câu hỏi con
             for (const ans of item.answers) {
                 const ansRequest = new sql.Request(transaction);
                 ansRequest.input('questionId', sql.Int, childQuestionId);

@@ -5,9 +5,7 @@ const fs = require('fs');
 // Đường dẫn thư mục lưu PDF
 const DOCUMENTS_DIR = path.join(__dirname, '../../public/documents');
 
-// ====================================================================
 // 1. LẤY TẤT CẢ RESOURCES (hỗ trợ search)
-// ====================================================================
 const getAllResources = async (req, res) => {
     const { search } = req.query;
     try {
@@ -36,9 +34,7 @@ const getAllResources = async (req, res) => {
     }
 };
 
-// ====================================================================
 // 2. LẤY RESOURCE THEO TAG ID
-// ====================================================================
 const getResourcesByTagId = async (req, res) => {
     const { tagId } = req.params;
     const parsedTagId = parseInt(tagId);
@@ -61,9 +57,7 @@ const getResourcesByTagId = async (req, res) => {
     }
 };
 
-// ====================================================================
 // 3. GỢI Ý TÀI LIỆU CHO HỌC SINH (DỰA TRÊN TAG SAI NHIỀU NHẤT)
-// ====================================================================
 const getRecommendedResources = async (req, res) => {
     const { studentId, limit = 10 } = req.query;
     const parsedStudentId = parseInt(studentId);
@@ -138,9 +132,7 @@ const getRecommendedResources = async (req, res) => {
     }
 };
 
-// ====================================================================
 // 4. THÊM TÀI LIỆU MỚI (upload file PDF)
-// ====================================================================
 const createResource = async (req, res) => {
     const { title, tagId } = req.body;
     const file = req.file;
@@ -192,9 +184,7 @@ const createResource = async (req, res) => {
     }
 };
 
-// ====================================================================
 // 5. XÓA TÀI LIỆU
-// ====================================================================
 const deleteResource = async (req, res) => {
     const { id } = req.params;
     const parsedId = parseInt(id);

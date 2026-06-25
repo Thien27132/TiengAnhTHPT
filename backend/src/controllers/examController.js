@@ -23,13 +23,13 @@ const createExam = async (req, res) => {
         if (selectedQuestionIds && Array.isArray(selectedQuestionIds) && selectedQuestionIds.length > 0) {
             const request = new sql.Request();
             const inClause = buildInClause(selectedQuestionIds, request);
-            // Get all selected questions without complex ORDER BY
+            // Lấy tất cả các câu hỏi đã chọn mà không cần sắp xếp phức tạp theo thứ tự
             const queryText = `
                 SELECT QuestionID, ParentID, IsPassage FROM Questions
                 WHERE QuestionID IN (${inClause}) OR ParentID IN (${inClause})`;
             const result = await request.query(queryText);
             
-            // Sort questions: passages first, then their child questions in order
+            // Sắp xếp câu hỏi: đoạn văn trước, sau đó là các câu hỏi con của đoạn văn theo thứ tự
             const passages = [];
             const childQuestionsMap = {};
             
@@ -45,7 +45,7 @@ const createExam = async (req, res) => {
                 }
             });
             
-            // Build final order: passage + its children, repeat for next passage
+            // Xây dựng thứ tự cuối cùng: đoạn văn + các đoạn văn con của nó, lặp lại cho đoạn văn tiếp theo
             finalQuestionIds = [];
             for (const pId of passages) {
                 finalQuestionIds.push(pId);
@@ -72,7 +72,7 @@ const createExam = async (req, res) => {
 
             for (const section of examStructure) {
                 if (section.type === 'Ordering') {
-                    // Ordering: mỗi bài có thể có số câu con khác nhau, lấy đủ 5 câu con
+                    // Ordering: mỗi bài lấy đủ 5 câu con
                     let orderingChildCount = 0;
                     const targetChildren = section.childCount;
 
@@ -188,7 +188,7 @@ const submitExam = async (req, res) => {
                 questionId: ans.questionId,
                 selectedAnswerId: ans.selectedAnswerId,
                 isCorrect: isCorrect ? 1 : 0,
-                displayOrder: ans.displayOrder || null  // Include displayOrder from frontend
+                displayOrder: ans.displayOrder || null  // Bao gồm displayOrder từ frontend
             });
         });
 
@@ -254,7 +254,7 @@ const getExamDetail = async (req, res) => {
         res.json({
             exam: examInfo.recordset[0],
             questions: questions.recordset.map(q => {
-                // Parse content for passage questions (JSON format)
+                // Parse content để tìm câu hỏi dạng passage (JSON)
                 if (q.IsPassage) {
                     try {
                         const parsed = JSON.parse(q.Content);
@@ -333,7 +333,7 @@ const getStudentExamHistory = async (req, res) => {
 const getExamResultDetail = async (req, res) => {
     const { resultId } = req.params;
     try {
-        // Get exam result info
+        // Lấy thông tin kết quả thi
         const resultInfo = await sql.query`
             SELECT 
                 er.ResultID,
@@ -356,7 +356,7 @@ const getExamResultDetail = async (req, res) => {
         const examResult = resultInfo.recordset[0];
         const examId = examResult.ExamID;
 
-        // Get all exam questions (including passages)
+        // Lấy tất cả các câu hỏi thi (bao gồm cả passage)
         const allQuestions = await sql.query`
             SELECT 
                 q.QuestionID,
@@ -371,7 +371,7 @@ const getExamResultDetail = async (req, res) => {
             )
             ORDER BY eq.QuestionOrder ASC`;
 
-        // Get all answers for these questions
+        // Lấy tất cả đáp án cho các câu hỏi
         const questionIds = allQuestions.recordset.map(q => q.QuestionID);
         let allAnswers = [];
         
@@ -394,11 +394,11 @@ const getExamResultDetail = async (req, res) => {
                 ORDER BY QuestionID ASC, AnswerID ASC`);
             allAnswers = answersResult.recordset.map(ans => ({
                 ...ans,
-                IsCorrect: ans.IsCorrect ? 1 : 0  // Convert boolean to 1/0
+                IsCorrect: ans.IsCorrect ? 1 : 0  // Chuyển giá trị boolean thành 1 hoặc 0
             }));
         }
 
-        // Get student's answers (result details)
+        // Lấy những đáp án học sinh đã chọn (result_details)
         const resultDetails = await sql.query`
             SELECT 
                 rd.DetailID,
@@ -419,7 +419,7 @@ const getExamResultDetail = async (req, res) => {
         const answersByQuestion = {};
         const resultDetailMap = {};
 
-        // Group answers by question
+        // Nhóm câu trả lời theo câu hỏi
         allAnswers.forEach(ans => {
             if (!answersByQuestion[ans.QuestionID]) {
                 answersByQuestion[ans.QuestionID] = [];
@@ -427,12 +427,12 @@ const getExamResultDetail = async (req, res) => {
             answersByQuestion[ans.QuestionID].push(ans);
         });
 
-        // Map result details by question
+        // Map result details bằng question
         resultDetails.recordset.forEach(rd => {
             resultDetailMap[rd.QuestionID] = rd;
         });
 
-        // Structure questions with all their data
+        // Cấu trúc câu hỏi với đầy đủ dữ liệu
         allQuestions.recordset.forEach(q => {
             questionMap[q.QuestionID] = {
                 ...q,
@@ -441,7 +441,7 @@ const getExamResultDetail = async (req, res) => {
             };
         });
 
-        // Organize passages with their child questions
+        // Sắp xếp các đoạn văn với các câu hỏi con
         allQuestions.recordset.forEach(q => {
             if (q.IsPassage) {
                 groupedQuestions.push({
@@ -449,7 +449,7 @@ const getExamResultDetail = async (req, res) => {
                     data: questionMap[q.QuestionID]
                 });
 
-                // Find child questions
+                // Tìm câu hỏi con
                 allQuestions.recordset.forEach(childQ => {
                     if (childQ.ParentID === q.QuestionID) {
                         groupedQuestions.push({
@@ -459,7 +459,7 @@ const getExamResultDetail = async (req, res) => {
                     }
                 });
             } else if (!q.ParentID) {
-                // Standalone (non-passage) questions
+                // Câu hỏi độc lập (không phải câu hỏi đoạn văn)
                 groupedQuestions.push({
                     type: 'question',
                     data: questionMap[q.QuestionID]
