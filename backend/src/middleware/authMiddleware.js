@@ -8,7 +8,7 @@ const verifyToken = (req, res, next) => {
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = decoded; // Trong này giờ có cả userId và role
+        req.user = decoded; // Trong này có cả userId và role
         next();
     } catch (err) {
         res.status(403).json({ message: "Token không hợp lệ!" });

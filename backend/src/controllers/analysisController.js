@@ -59,25 +59,25 @@ const getIncorrectAnswersWithTags = async (req, res) => {
                 q.Content AS QuestionContent,
                 q.QuestionType,
                 rd.SelectedAnswerID,
-                a_selected.AnswerContent AS StudentAnswer,
+                a_selected.AnswerContent AS StudentAnswer,            
                 a_correct.AnswerID AS CorrectAnswerID,
-                a_correct.AnswerContent AS CorrectAnswer,
-                a_correct.Explanation AS Explanation,
-                t.TagID,
-                t.TagName,
-                r.ContentURL AS DocumentURL,
-                r.Title AS DocumentTitle
-            FROM Exam_Questions eq
-            INNER JOIN Questions q ON eq.QuestionID = q.QuestionID
+                a_correct.AnswerContent AS CorrectAnswer,            
+                a_correct.Explanation AS Explanation,                
+                t.TagID,                                             
+                t.TagName,                                           
+                r.ContentURL AS DocumentURL,                         
+                r.Title AS DocumentTitle                             
+            FROM Exam_Questions eq                                   
+            INNER JOIN Questions q ON eq.QuestionID = q.QuestionID   
             LEFT JOIN ResultDetail rd ON rd.QuestionID = eq.QuestionID AND rd.ResultID = ${parsedResultId}
             LEFT JOIN Question_Tags qt ON q.QuestionID = qt.QuestionID
             LEFT JOIN Tags t ON qt.TagID = t.TagID
-            LEFT JOIN Resources r ON t.TagID = r.TagID
+            LEFT JOIN Resources r ON t.TagID = r.TagID                                         
             LEFT JOIN Answers a_selected ON rd.SelectedAnswerID = a_selected.AnswerID
             LEFT JOIN Answers a_correct ON q.QuestionID = a_correct.QuestionID AND a_correct.IsCorrect = 1
             WHERE eq.ExamID = ${examInfo.ExamID}
-              AND q.IsPassage = 0
-              AND (rd.DetailID IS NULL OR rd.IsCorrect = 0)
+              AND q.IsPassage = 0                                       
+              AND (rd.DetailID IS NULL OR rd.IsCorrect = 0)               
             ORDER BY eq.QuestionOrder ASC, t.TagID ASC`;
 
         console.log('✅ Found incorrect answers:', incorrectAnswers.recordset.length);
@@ -202,7 +202,7 @@ const getStudentSkillMap = async (req, res) => {
         return res.status(400).json({ message: 'Cần cung cấp studentId hợp lệ' });
     }
 
-    // Bộ từ điển ánh xạ Tag -> Skill (đủ 43 tags trong hệ thống)
+    // Bộ từ điển ánh xạ Tag -> Skill (khớp với SQL seed: @NguPhap, @TuVung, @DocHieu)
     const skillDictionary = {
         'Ngữ pháp': [
             // 12 Thì
@@ -211,24 +211,23 @@ const getStudentSkillMap = async (req, res) => {
             'Thì tương lai đơn', 'Thì tương lai tiếp diễn', 'Thì tương lai gần', 'Thì tương lai hoàn thành tiếp diễn',
             // Cấu trúc câu
             'Câu so sánh', 'Câu điều kiện', 'Câu điều ước', 'Câu giả định',
-            'Câu chủ/bị động', 'Câu mệnh lệnh', 'Câu hỏi đuôi', 'Câu đảo ngữ',
-            'Câu tường thuật trực tiếp/gián tiếp', 'Mệnh đề quan hệ',
-            // Từ loại chức năng
-            'Đại từ', 'Liên từ', 'Giới từ', 'Lượng từ', 'Mạo từ'
+            'Câu chủ/bị động', 'Mệnh đề quan hệ', 'Câu mệnh lệnh', 'Câu hỏi đuôi',
+            'Câu đảo ngữ', 'Câu tường thuật trực tiếp/gián tiếp'
         ],
         'Từ vựng': [
-            // Từ loại nội dung
-            'Động từ', 'Danh từ', 'Tính từ', 'Trạng từ',
+            // Từ loại
+            'Đại từ', 'Danh từ', 'Tính từ', 'Động từ', 'Trạng từ',
+            'Lượng từ', 'Giới từ', 'Mạo từ', 'Liên từ',
             // Cụm từ & thành ngữ
             'Cụm từ cố định (Collocations)', 'Thành ngữ (Idioms)', 'Cụm động từ (Phrasal Verbs)',
-            'Từ đồng nghĩa/trái nghĩa',
-            // Dạng bài từ vựng
-            'Tìm từ đồng nghĩa (Synonym questions)', 'Tìm từ trái nghĩa (Opposite questions)'
+            'Từ đồng nghĩa/trái nghĩa'
         ],
         'Đọc hiểu': [
             'Đọc điền từ (Cloze test)', 'Tìm ý chính đoạn văn',
             'Câu hỏi chi tiết (According to the passage)', 'Câu hỏi suy luận (Inference)',
-            'Tìm từ thay thế (Referent questions)', 'Sắp xếp câu và đoạn văn'
+            'Tìm từ thay thế (Referent questions)',
+            'Tìm từ đồng nghĩa (Synonym questions)', 'Tìm từ trái nghĩa (Opposite questions)',
+            'Sắp xếp câu và đoạn văn'
         ]
     };
 
