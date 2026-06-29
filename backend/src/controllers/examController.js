@@ -16,7 +16,7 @@ const createExam = async (req, res) => {
             INSERT INTO Exams (ExamName, Duration, TotalQuestions, CreatedBy, Level)
             OUTPUT INSERTED.ExamID
             VALUES (${examName}, ${duration || 50}, ${totalQuestions || 40}, ${adminId}, ${level})`;
-        
+
         const examId = examResult.recordset[0].ExamID;
         let finalQuestionIds = [];
 
@@ -28,11 +28,11 @@ const createExam = async (req, res) => {
                 SELECT QuestionID, ParentID, IsPassage FROM Questions
                 WHERE QuestionID IN (${inClause}) OR ParentID IN (${inClause})`;
             const result = await request.query(queryText);
-            
+
             // Sắp xếp câu hỏi: đoạn văn trước, sau đó là các câu hỏi con của đoạn văn theo thứ tự
             const passages = [];
             const childQuestionsMap = {};
-            
+
             result.recordset.forEach(q => {
                 if (q.IsPassage) {
                     passages.push(q.QuestionID);
@@ -44,7 +44,7 @@ const createExam = async (req, res) => {
                     childQuestionsMap[q.ParentID].push(q.QuestionID);
                 }
             });
-            
+
             // Xây dựng thứ tự cuối cùng: đoạn văn + các đoạn văn con của nó, lặp lại cho đoạn văn tiếp theo
             finalQuestionIds = [];
             for (const pId of passages) {
@@ -137,9 +137,9 @@ const createExam = async (req, res) => {
             WHERE eq.ExamID = ${examId} AND q.IsPassage = 0`;
         const childOnlyCount = countResult.recordset[0].ChildCount;
 
-        res.status(201).json({ 
-            message: 'Tạo đề thành công!', 
-            examId, 
+        res.status(201).json({
+            message: 'Tạo đề thành công!',
+            examId,
             totalInserted: childOnlyCount
         });
     } catch (err) {
@@ -165,6 +165,7 @@ const submitExam = async (req, res) => {
             return res.status(404).json({ message: 'Đề thi không tồn tại.' });
         }
 
+        // lấy tất cả đáp án đúng của các câu hỏi thuộc đề thi này
         const correctAnswersResult = await sql.query`
             SELECT QuestionID, AnswerID 
             FROM Answers 
@@ -172,11 +173,13 @@ const submitExam = async (req, res) => {
                 SELECT QuestionID FROM Exam_Questions WHERE ExamID = ${parsedExamId}
             )`;
 
+        // Chuyển đổi danh sách đáp án đúng  thành một đối tượng tra cứu nhanh (Key-Value)
         const correctMap = {};
         correctAnswersResult.recordset.forEach(row => {
             correctMap[row.QuestionID] = row.AnswerID;
         });
 
+        // chấm điểm tự động
         let correctCount = 0;
         const totalQuestions = Object.keys(correctMap).length;
         const details = [];
@@ -194,13 +197,15 @@ const submitExam = async (req, res) => {
 
         const finalScore = totalQuestions > 0 ? Math.round(((correctCount * 10) / totalQuestions) * 100) / 100 : 0;
 
+        // Tạo một bản ghi mới trong bảng ExamResults để lưu thông tin bài nộp
         const resultInsert = await sql.query`
             INSERT INTO ExamResults (ExamID, StudentID, Score, CompletedTime)
             OUTPUT INSERTED.ResultID
             VALUES (${parsedExamId}, ${parsedStudentId}, ${finalScore}, ${parsedCompletedTime})`;
-        
+
         const resultId = resultInsert.recordset[0].ResultID;
 
+        // Lưu chi tiết từng câu trả lời vào bảng ResultDetail
         for (const detail of details) {
             await sql.query`
                 INSERT INTO ResultDetail (ResultID, QuestionID, SelectedAnswerID, IsCorrect, DisplayOrder)
@@ -238,6 +243,7 @@ const getExamDetail = async (req, res) => {
             return res.status(404).json({ message: 'Không tìm thấy đề thi' });
         }
 
+        // Lấy danh sách câu hỏi của đề thi theo thứ tự
         const questions = await sql.query`
             SELECT q.QuestionID, q.Content, q.IsPassage, q.ParentID, q.QuestionType, eq.QuestionOrder
             FROM Questions q
@@ -245,6 +251,7 @@ const getExamDetail = async (req, res) => {
             WHERE eq.ExamID = ${id}
             ORDER BY eq.QuestionOrder ASC`;
 
+        // xáo trộn đáp án ngẫu nhiên
         const answers = await sql.query`
             SELECT AnswerID, QuestionID, AnswerContent 
             FROM Answers 
@@ -292,6 +299,7 @@ const getStudentExamHistory = async (req, res) => {
         const request = new sql.Request();
         request.input('StudentID', sql.Int, studentId);
 
+        // Lấy lịch sử làm bài của sinh viên theo thứ tự giảm dần của thời gian làm bài
         let queryText = `
             SELECT 
                 er.ResultID,
@@ -371,10 +379,10 @@ const getExamResultDetail = async (req, res) => {
             )
             ORDER BY eq.QuestionOrder ASC`;
 
-        // Lấy tất cả đáp án cho các câu hỏi
+        // Lấy tất cả đáp án và lời giải thích cho các câu hỏi
         const questionIds = allQuestions.recordset.map(q => q.QuestionID);
         let allAnswers = [];
-        
+
         if (questionIds.length > 0) {
             const answerRequest = new sql.Request();
             const idParams = questionIds.map((value, index) => {
@@ -459,7 +467,7 @@ const getExamResultDetail = async (req, res) => {
                     }
                 });
             } else if (!q.ParentID) {
-                // Câu hỏi độc lập (không phải câu hỏi đoạn văn)
+                // Câu hỏi độc lập (không phải câu hỏi đoạn văn nếu có)
                 groupedQuestions.push({
                     type: 'question',
                     data: questionMap[q.QuestionID]
@@ -484,8 +492,7 @@ const getExamResultDetail = async (req, res) => {
 const deleteExam = async (req, res) => {
     const { id } = req.params;
     try {
-        // Chỉ cần xóa Exams → Exam_Questions, ExamResults tự CASCADE
-        // ExamResults xóa → ResultDetail tự CASCADE
+        //  xóa Exams 
         await sql.query`DELETE FROM Exams WHERE ExamID = ${id}`;
         res.json({ message: 'Xóa đề thi thành công' });
     } catch (err) {

@@ -123,7 +123,7 @@ const createQuestion = async (req, res) => {
             }
         }
 
-        // Insert câu hỏi con, tags, answers
+        // Insert câu hỏi con
         for (const item of questions) {
             const childRequest = new sql.Request(transaction);
             childRequest.input('childContent', sql.NVarChar, item.question || '');
@@ -171,6 +171,7 @@ const createQuestion = async (req, res) => {
 
 const getAllQuestions = async (req, res) => {
     try {
+        // đếm số câu hỏi cha, rồi đếm các câu con của từng câu cha
         const { type, q, level } = req.query;
         let queryStr = `
             SELECT q.*, ISNULL(child.ChildCount, 0) AS ChildCount,
@@ -233,6 +234,7 @@ const getAllQuestions = async (req, res) => {
 const getQuestionById = async (req, res) => {
     const { id } = req.params;
     try {
+        // tìm câu hỏi gốc, nếu tìm không thấy thì trả về lỗi
         const questionResult = await sql.query`
             SELECT * FROM Questions WHERE QuestionID = ${id}`;
 
@@ -241,11 +243,13 @@ const getQuestionById = async (req, res) => {
         }
 
         const requestedQuestion = questionResult.recordset[0];
+        // nếu là câu hỏi con thì tìm câu hỏi cha, ngược lại thì tìm chính nó
         const parentId = requestedQuestion.ParentID || requestedQuestion.QuestionID;
         const parentQuestion = requestedQuestion.ParentID
             ? (await sql.query`SELECT * FROM Questions WHERE QuestionID = ${requestedQuestion.ParentID}`).recordset[0]
             : requestedQuestion;
 
+        // tìm tag của câu hỏi cha
         const tagsResult = await sql.query`
             SELECT t.TagID, t.TagName, s.SkillName
             FROM Tags t
@@ -253,10 +257,13 @@ const getQuestionById = async (req, res) => {
             JOIN Skills s ON t.SkillID = s.SkillID
             WHERE qt.QuestionID = ${parentId}`;
 
+        // tìm các câu hỏi con    
         const childQuestionsResult = await sql.query`
             SELECT * FROM Questions WHERE ParentID = ${parentId} ORDER BY QuestionID ASC`;
         const childQuestions = childQuestionsResult.recordset;
 
+        // tìm đáp án của câu hỏi con
+        // tạo tham số động để thực hiện truy vấn đáp án, tags cho nhanh
         let answers = [];
         let questionTags = [];
         if (childQuestions.length > 0) {
@@ -288,12 +295,14 @@ const getQuestionById = async (req, res) => {
             questionTags = tagResult.recordset;
         }
 
+        // tạo object chứa câu trả lời theo câu hỏi
         const answersByQuestion = {};
         answers.forEach((ans) => {
             if (!answersByQuestion[ans.QuestionID]) answersByQuestion[ans.QuestionID] = [];
             answersByQuestion[ans.QuestionID].push(ans);
         });
 
+        // tạo object chứa tag theo câu hỏi
         const tagsByQuestion = {};
         questionTags.forEach((tag) => {
             if (!tagsByQuestion[tag.QuestionID]) tagsByQuestion[tag.QuestionID] = [];
@@ -377,7 +386,7 @@ const updateQuestion = async (req, res) => {
     try {
         await transaction.begin();
 
-        // Update parent question
+        // Update câu hỏi cha
         const content = buildParentContent(prompt, passage || '');
         const updateParentReq = new sql.Request(transaction);
         updateParentReq.input('content', sql.NVarChar, content);

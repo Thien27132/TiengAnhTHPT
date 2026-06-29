@@ -9,6 +9,8 @@ const DOCUMENTS_DIR = path.join(__dirname, '../../public/documents');
 const getAllResources = async (req, res) => {
     const { search } = req.query;
     try {
+        // truy vấn tìm kiếm bằng từ khóa chứa trong tiêu đề tài liệu
+        // Nếu không có từ khóa tìm kiếm, lấy toàn bộ danh sách tài liệu sắp xếp theo ngày đăng mới nhất
         let result;
         if (search && search.trim()) {
             const searchPattern = `%${search.trim()}%`;
@@ -63,6 +65,7 @@ const getRecommendedResources = async (req, res) => {
     const parsedStudentId = parseInt(studentId);
     const parsedLimit = parseInt(limit);
 
+    // Nhận studentId từ query của request
     if (!parsedStudentId || isNaN(parsedStudentId)) {
         return res.status(400).json({ message: 'Cần cung cấp studentId hợp lệ' });
     }
@@ -72,6 +75,9 @@ const getRecommendedResources = async (req, res) => {
         request.input('StudentID', sql.Int, parsedStudentId);
         request.input('Limit', sql.Int, parsedLimit);
 
+        // kết hợp nhiều bảng: chi tiết bài làm, bài thi của đúng học sinh, bảng tag, bảng tài liệu 
+        // truy vấn để tính toán số câu trả lời đúng sai trên từng tag, theo từng học sinh
+        // nhóm dữ liệu theo từng thẻ kiến thức (GROUP BY t.TagID, t.TagName)
         const result = await request.query`
             SELECT 
                 t.TagID,
@@ -169,7 +175,7 @@ const createResource = async (req, res) => {
         const newId = result.recordset[0].ResourceID;
         console.log(`✅ Tạo tài liệu mới: [${newId}] ${title}`);
 
-        res.status(201).json({ 
+        res.status(201).json({
             message: 'Thêm tài liệu thành công',
             resourceId: newId,
             contentURL

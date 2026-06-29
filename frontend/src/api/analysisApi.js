@@ -14,7 +14,7 @@ const analysisApi = {
     },
 
     // Tiến độ điểm số theo mã đề (Line Chart) - THÊM MỚI
-    getStudentProgress: (studentId, limit = 7) => {
+    getStudentProgress: (studentId, limit = 10) => {
         return axiosClient.get('/analysis/student-progress', {
             params: { studentId, limit }
         });

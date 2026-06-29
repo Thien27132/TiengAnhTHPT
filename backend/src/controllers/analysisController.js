@@ -11,7 +11,7 @@ const getIncorrectAnswersWithTags = async (req, res) => {
     }
 
     try {
-        // Lấy thông tin bài thi
+        // Lấy thông tin bài thi (Tên học sinh, điểm số, tên đề, độ khó của đề)
         const examResultInfo = await sql.query`
             SELECT 
                 er.ResultID,
@@ -35,7 +35,7 @@ const getIncorrectAnswersWithTags = async (req, res) => {
         const examInfo = examResultInfo.recordset[0];
         console.log('✅ Found exam result:', examInfo);
 
-        // Tính displayOrder đúng cho tất cả câu hỏi (không đếm passage)
+        // Tính thứ tự hiển thị cho các câu hỏi (không đếm passage)
         const allNonPassageQuestions = await sql.query`
             SELECT eq.QuestionID, eq.QuestionOrder
             FROM Exam_Questions eq
@@ -48,8 +48,9 @@ const getIncorrectAnswersWithTags = async (req, res) => {
             displayOrderMap[q.QuestionID] = idx + 1; // 1-based: 1, 2, 3, ..., 40
         });
 
-        // Lấy danh sách câu trả lời sai VÀ chưa chọn
+        // Lấy danh sách câu trả lời sai và chưa chọn
         // Dùng Exam_Questions làm bảng gốc, LEFT JOIN ResultDetail để bắt cả câu chưa trả lời
+        // Lấy ra nội dung đáp án học sinh đã chọn, đáp án đúng, giải thích, tag của câu hỏi và tài liệu ôn tập của tag đó
         const incorrectAnswers = await sql.query`
             SELECT 
                 rd.DetailID,
@@ -129,7 +130,7 @@ const getIncorrectAnswersWithTags = async (req, res) => {
             Object.values(processedQuestions).forEach(item => {
                 allIncorrectAnswers.push(item);
 
-                // Nhóm theo tag
+                // Nhóm theo tag để phân loại các câu hỏi sai theo từng tag riêng biệt
                 item.tags.forEach(tag => {
                     const tagName = tag.name;
                     if (!groupedByTag[tagName]) {
@@ -247,6 +248,7 @@ const getStudentSkillMap = async (req, res) => {
         request.input('StudentID', sql.Int, parsedStudentId);
         request.input('Limit', sql.Int, parsedLimit);
 
+        // thống kê số câu đúng sai và tỷ lệ đúng sai cho từng tag tương ứng với từng học sinh
         const result = await request.query`
             SELECT
                 t.TagName,
@@ -299,7 +301,7 @@ const getStudentSkillMap = async (req, res) => {
 };
 
 const getStudentProgress = async (req, res) => {
-    const { studentId, limit = 7 } = req.query; // Mặc định lấy 7 đề gần nhất như giao diện
+    const { studentId, limit = 10 } = req.query; // Mặc định lấy 10 đề gần nhất như giao diện
     const parsedStudentId = parseInt(studentId);
     const parsedLimit = parseInt(limit);
 
